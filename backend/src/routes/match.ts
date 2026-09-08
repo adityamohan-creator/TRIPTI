@@ -1,13 +1,12 @@
 import { Router } from 'express'
 import { type Need, type Resource, matchNeeds } from '../engine/match.js'
+import { LIFE_CRITICAL_KINDS } from '../lib/needPriority.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { admin } from '../supabase.js'
 
 export const matchRouter = Router()
 
 matchRouter.use(requireAuth, requireRole('coordinator', 'admin'))
-
-const LIFE_CRITICAL_KINDS = new Set(['rescue', 'medical', 'evacuation'])
 
 interface IncidentContext {
   lat: number | null

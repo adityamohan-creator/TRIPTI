@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom'
 import { SeverityBadge, StatusBadge } from '../components/ui/Badge'
+import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { SkeletonList } from '../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../components/ui/States'
@@ -27,13 +29,18 @@ export function Incidents() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Incidents</h1>
-        <p className="mt-1 text-sm text-ink-2">
-          {isReporter
-            ? 'Reports you have filed, and what has happened to them.'
-            : 'Everything currently on the board, newest first.'}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Incidents</h1>
+          <p className="mt-1 text-sm text-ink-2">
+            {isReporter
+              ? 'Reports you have filed, and what has happened to them.'
+              : 'Everything currently on the board, newest first.'}
+          </p>
+        </div>
+        <Link to="/app/incidents/new">
+          <Button>Report an emergency</Button>
+        </Link>
       </div>
 
       {loading && <SkeletonList rows={4} />}
@@ -54,15 +61,19 @@ export function Incidents() {
               ? 'You have not filed a report yet.'
               : 'No incidents have been reported. When one arrives it will appear here.'
           }
+          action={
+            <Link to="/app/incidents/new">
+              <Button>Report an emergency</Button>
+            </Link>
+          }
         />
       )}
 
       {!loading && !error && data && data.incidents.length > 0 && (
         <ul className="space-y-3">
           {data.incidents.map((incident) => (
-            <Card as="li" key={incident.id}>
-              {/* Not a link yet — the detail screen lands with triage in Phase 3. */}
-              <div className="px-5 py-4">
+            <Card as="li" key={incident.id} className="transition-colors hover:border-line-strong">
+              <Link to={`/app/incidents/${incident.id}`} className="block px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <SeverityBadge severity={incident.severity} />
                   <StatusBadge status={incident.status} />
@@ -91,7 +102,7 @@ export function Incidents() {
                     <span className="text-warning">Not yet located</span>
                   )}
                 </div>
-              </div>
+              </Link>
             </Card>
           ))}
         </ul>

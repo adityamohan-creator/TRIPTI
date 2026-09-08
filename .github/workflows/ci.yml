@@ -41,5 +41,14 @@ jobs:
 
       # Runs backend tsc --noEmit and the frontend build (tsc -b + vite build),
       # so this covers both typechecking and the production bundle.
+      #
+      # The VITE_ values are placeholders, not secrets. They exist because Vite
+      # inlines them at build time: without them the app folds to a constant
+      # "not configured" branch and the bundler eliminates the rest as dead
+      # code, so CI would pass while proving nothing about the real bundle.
+      # vite.config.ts fails the build rather than emitting that artifact.
       - name: Typecheck and build
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: npm run typecheck

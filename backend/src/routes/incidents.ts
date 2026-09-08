@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { extractIncident } from '../ai/extractIncident.js'
 import { notFound } from '../lib/errors.js'
 import { readHistory, recordStatusChange } from '../lib/history.js'
+import { needPriority } from '../lib/needPriority.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { aiLimiter } from '../middleware/rateLimit.js'
 import { admin } from '../supabase.js'
@@ -76,7 +77,9 @@ incidentsRouter.post('/', aiLimiter, async (req, res, next) => {
     }
     const body = parsed.data
 
-    const extracted = await extractIncident(body.report_text)
+    const { extraction, source, provider, degradedReason } = await extractIncident(
+      body.report_text,
+    )
 
     const { data, error } = await admin
       .from('incidents')
@@ -86,14 +89,18 @@ incidentsRouter.post('/', aiLimiter, async (req, res, next) => {
         lat: body.lat ?? null,
         lon: body.lon ?? null,
         status: 'open',
-        category: extracted.category,
-        severity: extracted.severity,
-        summary: extracted.summary,
-        location_text: extracted.location_text,
-        people_affected: extracted.people_affected,
-        source_language: extracted.source_language,
-        ai_confidence: extracted.confidence,
-        ai_unclear: extracted.unclear,
+        category: extraction.category,
+        severity: extraction.severity,
+        summary: extraction.summary,
+        location_text: extraction.location_text,
+        people_affected: extraction.people_affected,
+        source_language: extraction.source_language,
+        ai_confidence: extraction.confidence,
+        ai_unclear: extraction.unclear,
+        vulnerable_groups: extraction.vulnerable_groups,
+        ai_source: source,
+        ai_provider: provider,
+        ai_degraded_reason: degradedReason ?? null,
       })
       .select()
       .single()
@@ -109,9 +116,9 @@ incidentsRouter.post('/', aiLimiter, async (req, res, next) => {
       if (contactError) throw contactError
     }
 
-    if (extracted.needs.length > 0) {
+    if (extraction.needs.length > 0) {
       const { error: needsError } = await admin.from('needs').insert(
-        extracted.needs.map((n) => ({
+        extraction.needs.map((n) => ({
           incident_id: data.id,
           kind: n.kind,
           quantity: n.quantity,
@@ -129,10 +136,13 @@ incidentsRouter.post('/', aiLimiter, async (req, res, next) => {
       fromStatus: null,
       toStatus: 'open',
       changedBy: req.user!.id,
-      note: `Reported. AI confidence ${extracted.confidence.toFixed(2)}.`,
+      note:
+        source === 'model'
+          ? `Reported. AI confidence ${extraction.confidence.toFixed(2)}.`
+          : `Reported. AI extraction unavailable (${degradedReason ?? 'unknown'}); keyword scan only.`,
     })
 
-    res.status(201).json({ incident: data, extracted })
+    res.status(201).json({ incident: data, extraction, source, degradedReason })
   } catch (err) {
     next(err)
   }
@@ -157,7 +167,18 @@ incidentsRouter.get('/:id', async (req, res, next) => {
     // made has to be made here instead.
     if (!isOwner && !isResponder) throw notFound('No such incident')
 
-    res.json({ incident: data, history: await readHistory('incident', data.id) })
+    // The priority of each need, with the per-term arithmetic behind it. A
+    // coordinator overriding a score has to be able to see what produced it.
+    const needs = (data.needs ?? []) as { id: string; kind: string; status: string; quantity: number | null }[]
+    const priorities = Object.fromEntries(
+      needs.map((need) => [need.id, needPriority(data, need)]),
+    )
+
+    res.json({
+      incident: data,
+      priorities,
+      history: await readHistory('incident', data.id),
+    })
   } catch (err) {
     next(err)
   }

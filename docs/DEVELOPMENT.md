@@ -211,6 +211,14 @@ The auth user exists but has no `profiles` row. The `on_auth_user_created`
 trigger creates one automatically — if the user predates the migration, insert
 the profile manually.
 
+**`Cannot build the frontend without VITE_SUPABASE_URL...`**
+Working as intended. Vite inlines `VITE_` variables at build time, so a build
+without them folds the app to a constant "not configured" branch and the
+bundler removes everything behind it — a green build that ships a bundle which
+can only ever render the setup screen, and which setting the variables on the
+host afterwards cannot repair. `vite.config.ts` fails instead. Set the two
+values (both public) in `.env.local` or in the CI/hosting environment.
+
 **The app shows "TRIPTI is not configured yet"**
 `frontend/.env.local` is missing or incomplete. The screen lists exactly which
 variables to set. Restart Vite afterwards — env changes are not hot-reloaded.

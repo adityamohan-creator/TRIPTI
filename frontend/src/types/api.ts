@@ -68,6 +68,8 @@ export interface Need {
   created_at: string
 }
 
+export type ExtractionSource = 'model' | 'fallback'
+
 export interface Incident {
   id: string
   report_text: string
@@ -80,6 +82,11 @@ export interface Incident {
   source_language: string | null
   ai_confidence: number | null
   ai_unclear: string[]
+  /** model = an LLM read the report. fallback = keyword scan only. */
+  ai_source: ExtractionSource
+  ai_provider: string | null
+  ai_degraded_reason: string | null
+  vulnerable_groups: string[]
   lat: number | null
   lon: number | null
   status: IncidentStatus
@@ -143,3 +150,45 @@ export const CAN_PUBLISH_RESOURCES: readonly Role[] = [
   'coordinator',
   'admin',
 ]
+
+export type PriorityLevel = 'routine' | 'elevated' | 'high' | 'critical'
+
+export interface PriorityTerm {
+  key: string
+  label: string
+  normalised: number
+  weight: number
+  points: number
+  detail: string
+}
+
+export interface PriorityBreakdown {
+  score: number
+  level: PriorityLevel
+  terms: PriorityTerm[]
+}
+
+export interface IncidentDetail {
+  incident: Incident
+  /** Keyed by need id. */
+  priorities: Record<string, PriorityBreakdown>
+  history: StatusHistoryEntry[]
+}
+
+export interface ExtractionResponse {
+  incident: Incident
+  extraction: {
+    summary: string
+    category: string
+    severity: Severity
+    location_text: string | null
+    people_affected: number | null
+    needs: { kind: string; quantity: number | null; unit: string | null; note: string | null }[]
+    vulnerable_groups: string[]
+    source_language: string
+    confidence: number
+    unclear: string[]
+  }
+  source: ExtractionSource
+  degradedReason?: string
+}

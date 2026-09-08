@@ -1,91 +1,76 @@
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
-import { z } from 'zod'
-import { MODEL, anthropic } from './client.js'
+import { fallbackExtract } from './fallback.js'
+import {
+  ExtractedIncident,
+  type ExtractionProvider,
+  type ExtractionResult,
+} from './types.js'
+
+export { ExtractedIncident } from './types.js'
+export type { ExtractionResult, ExtractionSource } from './types.js'
 
 /**
- * What the model is allowed to return from a free-text report. Deliberately
- * descriptive, not prescriptive: it extracts and classifies, it does not decide
- * who gets dispatched. Allocation stays in the deterministic matching engine.
+ * Resolved on first use, not at import.
+ *
+ * The Anthropic provider reaches config.ts, which throws at module load when the
+ * environment is incomplete. Constructing it eagerly made this whole module —
+ * including the fallback path whose entire job is to work when the model does
+ * not — impossible to load without a full set of API keys.
  */
-export const ExtractedIncident = z.object({
-  summary: z.string().describe('One or two sentences, in English.'),
-  category: z.enum([
-    'flood',
-    'earthquake',
-    'fire',
-    'cyclone',
-    'landslide',
-    'medical',
-    'displacement',
-    'infrastructure',
-    'other',
-  ]),
-  severity: z.enum(['low', 'medium', 'high', 'critical']),
-  location_text: z
-    .string()
-    .nullable()
-    .describe('Place name exactly as stated in the report. Do not guess coordinates.'),
-  people_affected: z.number().int().nonnegative().nullable(),
-  needs: z.array(
-    z.object({
-      kind: z.enum([
-        'water',
-        'food',
-        'shelter',
-        'medical',
-        'rescue',
-        'evacuation',
-        'clothing',
-        'sanitation',
-        'power',
-        'other',
-      ]),
-      quantity: z.number().nonnegative().nullable(),
-      unit: z.string().nullable(),
-      note: z.string().nullable(),
-    }),
-  ),
-  source_language: z.string().describe('BCP-47 tag of the original report, e.g. "hi".'),
-  confidence: z.number().min(0).max(1),
-  unclear: z
-    .array(z.string())
-    .describe('Anything ambiguous a human coordinator should confirm.'),
-})
+async function defaultProvider(): Promise<ExtractionProvider> {
+  const { anthropicProvider } = await import('./anthropic.provider.js')
+  return anthropicProvider
+}
 
-export type ExtractedIncident = z.infer<typeof ExtractedIncident>
+/** A slow extraction is a failed extraction — someone is waiting on this. */
+const TIMEOUT_MS = 25_000
 
-const SYSTEM = `You extract structured disaster-response data from incident reports.
-
-Reports arrive in any language, often from distressed people, and are frequently
-incomplete or contradictory. Your job is extraction and classification only.
-
-Rules:
-- Never invent details. If a field is not stated, use null or an empty array.
-- Never geocode. Copy the place name as written into location_text.
-- Set severity on stated impact, not on emotional intensity.
-- Put every ambiguity into "unclear" instead of resolving it yourself.
-- You do not decide who responds or how resources are allocated.`
-
-/**
- * Turns a free-text report into structured fields. The result is a proposal for
- * a human coordinator to confirm, not an authoritative record.
- */
-export async function extractIncident(reportText: string): Promise<ExtractedIncident> {
-  const message = await anthropic.messages.parse({
-    model: MODEL,
-    max_tokens: 4096,
-    system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-    output_config: { format: zodOutputFormat(ExtractedIncident), effort: 'medium' },
-    messages: [{ role: 'user', content: `Incident report:\n\n${reportText}` }],
-  })
-
-  if (message.stop_reason === 'refusal') {
-    throw new Error(
-      `Extraction declined: ${message.stop_details?.category ?? 'unknown category'}`,
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Extraction timed out after ${ms}ms`)),
+      ms,
     )
+    promise.then(resolve, reject).finally(() => clearTimeout(timer))
+  })
+}
+
+/**
+ * Turns a free-text report into structured fields.
+ *
+ * The result is a proposal for a human coordinator to confirm, never an
+ * authoritative record — which is also why a model failure is not fatal here.
+ * If the provider errors, times out, or returns something that does not match
+ * the schema, the deterministic keyword fallback runs instead and the result is
+ * marked `source: 'fallback'` so every surface downstream can say so plainly.
+ *
+ * An AI outage degrades intake. It must never block it.
+ */
+export async function extractIncident(
+  reportText: string,
+  override?: ExtractionProvider,
+): Promise<ExtractionResult> {
+  let provider: ExtractionProvider | null = null
+  try {
+    provider = override ?? (await defaultProvider())
+    const raw = await withTimeout(provider.extract(reportText), TIMEOUT_MS)
+
+    // Validate even though the provider claims to have done so. A provider is
+    // an interface, and the next implementation may be less careful.
+    const parsed = ExtractedIncident.safeParse(raw)
+    if (!parsed.success) {
+      throw new Error('Extraction did not match the expected schema')
+    }
+
+    return { extraction: parsed.data, source: 'model', provider: provider.name }
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'Unknown extraction failure'
+    console.error('AI extraction failed, falling back to keyword scan:', reason)
+
+    return {
+      extraction: fallbackExtract(reportText),
+      source: 'fallback',
+      provider: 'deterministic-keyword-scan',
+      degradedReason: reason,
+    }
   }
-  if (!message.parsed_output) {
-    throw new Error('Extraction returned no parseable output')
-  }
-  return message.parsed_output
 }

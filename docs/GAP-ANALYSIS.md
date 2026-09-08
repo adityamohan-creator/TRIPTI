@@ -8,6 +8,11 @@
 > stand in for generated ones until a project is provisioned. `matches` is now a
 > real table with a reservation column, which is the groundwork D7 needs.
 >
+> **Phase 3 update.** Requirements #1 (AI analyzer, now behind a provider
+> interface with a deterministic fallback) and #2 (priority engine with the
+> PRD's weights and a per-term breakdown) done. Incident intake and triage
+> screens shipped. A new defect, D12, was found and fixed.
+>
 > The tables below are the original Phase 0 audit, annotated.
 
 
@@ -41,8 +46,8 @@ Priority: **P0** = demo fails without it · **P1** = demo is weak without it ·
 
 | # | PRD requirement | Existing status | Missing | Plan | Pri |
 |---|---|---|---|---|---|
-| 1 | AI Crisis Analyzer | ✅ `ai/extractIncident.ts`, zod-validated, good system prompt | Provider adapter; fallback when API fails; prompt-injection guard; voice/multilingual entry point | Phase 3: wrap in `AiProvider`, add deterministic degrade path | P0 |
-| 2 | AI Priority Engine | ✅ `engine/priority.ts` + tests | Configurable weights; per-term explanation payload for the UI; vulnerability + shortage terms from the PRD formula | Phase 3: return `{score, level, breakdown[]}` | P0 |
+| 1 | AI Crisis Analyzer | ✅ done — `ExtractionProvider` interface, timeout, schema revalidation, deterministic keyword fallback, prompt-injection instruction + delimited input | Voice capture | Phase 3 | P0 |
+| 2 | AI Priority Engine | ✅ done — PRD weights, configurable, 0–100 score, four bands, per-term breakdown surfaced in the UI | — | Phase 3 | P0 |
 | 3 | Response Plan Generator | ⚠️ `POST /api/match/preview` returns raw matches | Coverage %, shortage list, volunteer/vehicle needs, ETA, persisted plan for approval | Phase 4: `response_plans` table + service | P0 |
 | 4 | Smart Resource Matching | ✅ `engine/match.ts` greedy + tests | Quantity-fit / time-fit / transport-fit terms; reservation to prevent over-allocation across concurrent requests | Phase 4: extend score, add DB-level reservation | P0 |
 | 5 | Food waste → need matching | ⚠️ supply side done — `resources` carries `expiry_time`/`perishable`, donor UI ships it | Expiry boost in the matcher | Phase 4 | P1 |
@@ -123,6 +128,27 @@ configuration-error screen instead of throwing.
 Triage writes `triaged_by` but records no history row (see D4), and accepts a
 `lat` without a `lon` (or vice versa), producing a half-located incident that the
 matcher will silently exclude. Require the pair together.
+
+### ✅ D12 — A build without env silently shipped an empty app · **P0** · _FIXED_ · `frontend/vite.config.ts`
+
+Found while checking why the production bundle had not grown across three
+phases. Vite substitutes `import.meta.env.VITE_*` with literals at build time.
+With the variables unset, `isSupabaseConfigured` folded to a constant `false`,
+so `App`'s early return became unconditional and the bundler eliminated the
+router, every screen and every feature as dead code:
+
+```js
+function jo(){return jsx(qn,{})}   // App — the whole tree, gone
+```
+
+The build stayed green and emitted a 352 kB bundle whose only possible render
+was the setup screen; setting the variables on the hosting platform afterwards
+could not repair it, because the code was no longer there. CI would have passed
+on every commit while proving nothing about the real artifact.
+
+`vite.config.ts` now fails the production build when either variable is missing,
+and CI supplies placeholders. With them set the bundle is 418 kB and contains
+the application.
 
 ### D7 — `POST /match/preview` ignores existing commitments · **P1** · `routes/match.ts`
 

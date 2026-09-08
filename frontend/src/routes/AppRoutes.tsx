@@ -3,6 +3,8 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { ProfilePage } from '../features/auth/ProfilePage'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { RegisterPage } from '../features/auth/RegisterPage'
+import { IncidentDetailPage } from '../features/incidents/IncidentDetailPage'
+import { ReportPage } from '../features/incidents/ReportPage'
 import { ResourcesPage } from '../features/resources/ResourcesPage'
 import { AppShell } from '../layouts/AppShell'
 import { AuthLayout } from '../layouts/AuthLayout'
@@ -37,6 +39,8 @@ export function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="incidents" element={<Incidents />} />
+        <Route path="incidents/new" element={<ReportPage />} />
+        <Route path="incidents/:id" element={<IncidentDetailPage />} />
         <Route path="resources" element={<ResourcesPage />} />
         <Route path="missions" element={<Missions />} />
         <Route path="profile" element={<ProfilePage />} />
