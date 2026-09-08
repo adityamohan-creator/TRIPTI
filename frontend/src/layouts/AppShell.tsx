@@ -42,7 +42,7 @@ export function AppShell() {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+      'rounded-control px-3 py-2 text-sm font-medium transition-colors',
       isActive ? 'bg-brand-600 text-white' : 'text-ink-2 hover:bg-sunken hover:text-ink',
     )
 
@@ -51,7 +51,7 @@ export function AppShell() {
       <header className="sticky top-0 z-30 border-b border-line bg-raised/85 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
           <NavLink to="/app" className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+            <span className="grid size-8 place-items-center rounded-control bg-brand-600 text-sm font-bold text-white">
               T
             </span>
             <span className="text-base font-semibold tracking-tight text-ink">TRIPTI</span>
@@ -115,7 +115,7 @@ export function AppShell() {
               <button
                 type="button"
                 onClick={onSignOut}
-                className="rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-2 hover:bg-sunken hover:text-ink"
+                className="rounded-control px-3 py-2 text-left text-sm font-medium text-ink-2 hover:bg-sunken hover:text-ink"
               >
                 Sign out
               </button>

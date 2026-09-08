@@ -1,6 +1,7 @@
 import type {
   InputHTMLAttributes,
   ReactNode,
+  Ref,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react'
@@ -8,7 +9,7 @@ import { useId } from 'react'
 import { cn } from '../../lib/cn'
 
 const CONTROL =
-  'w-full rounded-lg border border-line-strong bg-raised px-3 py-2 text-sm text-ink ' +
+  'w-full rounded-control border border-line-strong bg-raised px-3 py-2 text-sm text-ink ' +
   'placeholder:text-ink-3 transition-colors ' +
   'focus:border-brand-500 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-3 ' +
   'aria-[invalid=true]:border-danger'
@@ -61,13 +62,18 @@ interface BaseProps {
   error?: string | null
 }
 
+/** React 19 passes ref as a plain prop to function components. */
+interface WithRef<T> {
+  ref?: Ref<T>
+}
+
 export function Input({
   label,
   hint,
   error,
   className,
   ...rest
-}: BaseProps & InputHTMLAttributes<HTMLInputElement>) {
+}: BaseProps & WithRef<HTMLInputElement> & InputHTMLAttributes<HTMLInputElement>) {
   const id = useId()
   return (
     <Wrapper id={id} label={label} hint={hint} error={error} required={rest.required}>
@@ -88,7 +94,7 @@ export function Textarea({
   error,
   className,
   ...rest
-}: BaseProps & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: BaseProps & WithRef<HTMLTextAreaElement> & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const id = useId()
   return (
     <Wrapper id={id} label={label} hint={hint} error={error} required={rest.required}>
@@ -110,7 +116,7 @@ export function Select({
   className,
   children,
   ...rest
-}: BaseProps & SelectHTMLAttributes<HTMLSelectElement>) {
+}: BaseProps & WithRef<HTMLSelectElement> & SelectHTMLAttributes<HTMLSelectElement>) {
   const id = useId()
   return (
     <Wrapper id={id} label={label} hint={hint} error={error} required={rest.required}>

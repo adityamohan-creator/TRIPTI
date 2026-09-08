@@ -25,7 +25,7 @@ export function Alert({
     <div
       // Failures need to interrupt a screen reader; the rest can wait its turn.
       role={tone === 'danger' ? 'alert' : 'status'}
-      className={cn('rounded-lg border px-4 py-3 text-sm', TONES[tone], className)}
+      className={cn('rounded-control border px-4 py-3 text-sm', TONES[tone], className)}
     >
       {title && <p className="font-semibold">{title}</p>}
       {children && <div className={cn(title ? 'mt-1' : undefined, 'opacity-90')}>{children}</div>}

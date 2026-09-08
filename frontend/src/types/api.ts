@@ -97,3 +97,49 @@ export interface StatusHistoryEntry {
   note: string | null
   changed_at: string
 }
+
+export const RESOURCE_KINDS = [
+  'water',
+  'food',
+  'shelter',
+  'medical',
+  'rescue',
+  'evacuation',
+  'clothing',
+  'sanitation',
+  'power',
+  'other',
+] as const
+export type ResourceKind = (typeof RESOURCE_KINDS)[number]
+
+export interface Resource {
+  id: string
+  owner_id: string | null
+  label: string
+  description: string | null
+  kind: string
+  /** Null means unmetered: a rescue team, a doctor, a boat. */
+  quantity: number | null
+  unit: string | null
+  reserved_quantity: number
+  address: string | null
+  lat: number | null
+  lon: number | null
+  expiry_time: string | null
+  perishable: boolean
+  status: ResourceStatus
+  created_at: string
+  updated_at: string
+  /** quantity - reserved_quantity, computed by the backend. */
+  available_quantity: number | null
+  expired: boolean
+}
+
+/** Roles allowed to publish supply. Mirrors CAN_CREATE in the resources service. */
+export const CAN_PUBLISH_RESOURCES: readonly Role[] = [
+  'donor',
+  'ngo',
+  'volunteer',
+  'coordinator',
+  'admin',
+]

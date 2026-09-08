@@ -9,7 +9,7 @@ export function AuthLayout() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="flex flex-col px-6 py-10 sm:px-12">
         <Link to="/" className="flex items-center gap-2 self-start">
-          <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+          <span className="grid size-8 place-items-center rounded-control bg-brand-600 text-sm font-bold text-white">
             T
           </span>
           <span className="text-base font-semibold tracking-tight text-ink">TRIPTI</span>

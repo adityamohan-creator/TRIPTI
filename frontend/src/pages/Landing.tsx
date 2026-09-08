@@ -37,7 +37,7 @@ export function Landing() {
     <div className="min-h-screen bg-page">
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-4">
-          <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+          <span className="grid size-8 place-items-center rounded-control bg-brand-600 text-sm font-bold text-white">
             T
           </span>
           <span className="text-base font-semibold tracking-tight text-ink">TRIPTI</span>

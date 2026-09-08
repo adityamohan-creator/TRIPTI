@@ -7,7 +7,7 @@ export function ConfigurationError() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-page px-6">
       <div className="max-w-lg">
-        <span className="grid size-9 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+        <span className="grid size-9 place-items-center rounded-control bg-brand-600 text-sm font-bold text-white">
           T
         </span>
         <h1 className="mt-5 text-xl font-semibold tracking-tight text-ink">
@@ -21,7 +21,7 @@ export function ConfigurationError() {
           from the example file and fill in both values:
         </p>
 
-        <pre className="mt-4 overflow-x-auto rounded-lg border border-line bg-sunken p-4 font-mono text-xs text-ink-2">
+        <pre className="mt-4 overflow-x-auto rounded-control border border-line bg-sunken p-4 font-mono text-xs text-ink-2">
 {`VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key`}
         </pre>

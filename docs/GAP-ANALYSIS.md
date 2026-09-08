@@ -1,8 +1,14 @@
 # TRIPTI — PRD gap analysis
 
-> **Phase 1 update (2026-09-08).** Defects D1, D2, D3, D5, D6, D8, D9, D10 and
-> D11 are fixed and verified; D4 now has a writer. Requirement #18 (auth) and
-> #23 (CI) are done. The tables below are the original Phase 0 audit, annotated.
+> **Phase 1 update.** Defects D1, D2, D3, D5, D6, D8, D9, D10 and D11 are fixed
+> and verified; D4 now has a writer. Requirements #18 (auth) and #23 (CI) done.
+>
+> **Phase 2 update.** Requirements #19 (resource CRUD) and #20 (needs CRUD) done,
+> with the service/repository layer and migration `0004`. Hand-written DB types
+> stand in for generated ones until a project is provisioned. `matches` is now a
+> real table with a reservation column, which is the groundwork D7 needs.
+>
+> The tables below are the original Phase 0 audit, annotated.
 
 
 Audited: 2026-09-08. Repository state: 46 tracked-able files, **zero commits**,
@@ -39,7 +45,7 @@ Priority: **P0** = demo fails without it · **P1** = demo is weak without it ·
 | 2 | AI Priority Engine | ✅ `engine/priority.ts` + tests | Configurable weights; per-term explanation payload for the UI; vulnerability + shortage terms from the PRD formula | Phase 3: return `{score, level, breakdown[]}` | P0 |
 | 3 | Response Plan Generator | ⚠️ `POST /api/match/preview` returns raw matches | Coverage %, shortage list, volunteer/vehicle needs, ETA, persisted plan for approval | Phase 4: `response_plans` table + service | P0 |
 | 4 | Smart Resource Matching | ✅ `engine/match.ts` greedy + tests | Quantity-fit / time-fit / transport-fit terms; reservation to prevent over-allocation across concurrent requests | Phase 4: extend score, add DB-level reservation | P0 |
-| 5 | Food waste → need matching | ❌ nothing | `food_listings` with `expiry_time`; expiry boost in the matcher; donor UI | Phase 4 | P1 |
+| 5 | Food waste → need matching | ⚠️ supply side done — `resources` carries `expiry_time`/`perishable`, donor UI ships it | Expiry boost in the matcher | Phase 4 | P1 |
 | 6 | Volunteer assignment | ❌ nothing | `volunteers` table, skills/availability/workload, assignment function | Phase 5 | P0 |
 | 7 | Vehicle assignment | ❌ nothing | `vehicles` table, capacity fit | Phase 5 | P1 |
 | 8 | Route optimization | ❌ nothing | Routing provider adapter, `routes` + `mission_stops`, multi-stop ordering | Phase 5 | P0 |
@@ -52,12 +58,12 @@ Priority: **P0** = demo fails without it · **P1** = demo is weak without it ·
 | 15 | Trust / fraud detection | ❌ nothing | Duplicate + implausible-quantity heuristics | Phase 8 | P2 |
 | 16 | Voice + multilingual intake | ⚠️ `source_language` extracted | Web Speech API capture; language surfaced in UI | Phase 8 | P2 |
 | 17 | Impact analytics | ❌ Recharts installed, never imported | `impact_metrics`, aggregation endpoint, dashboard charts | Phase 8 | P1 |
-| 18 | Auth + roles | ⚠️ **backend only** | No login/register/logout UI, no session, no protected routes, no role routing, no profile page | Phase 1 | P0 |
-| 19 | Resource CRUD | ❌ table exists, no routes, no UI | Full CRUD + donor/NGO screens | Phase 2 | P0 |
-| 20 | Needs CRUD | ⚠️ inserted by extraction only | List/update/fulfil endpoints | Phase 2 | P0 |
+| 18 | Auth + roles | ✅ done — six roles, session, protected + role-gated routes, profile | — | Phase 1 | P0 |
+| 19 | Resource CRUD | ✅ done — routes, service, repository, table UI with create/edit/delete | — | Phase 2 | P0 |
+| 20 | Needs CRUD | ✅ done — list, create, update endpoints | Fulfilment UI lands with matching | Phase 2 | P0 |
 | 21 | Demo seed / reset | ❌ nothing | `scripts/seed-demo-data`, `reset-demo-data`, `health-check` | Phase 8 | P0 |
 | 22 | Docs suite | ⚠️ README + CLAUDE.md + this audit | API, DATABASE, AI, SECURITY, DEPLOYMENT, TESTING, DEMO | rolling | P1 |
-| 23 | CI | ❌ nothing | GitHub Actions: install → lint → typecheck → test → build | Phase 1 | P1 |
+| 23 | CI | ✅ done — `.github/workflows/ci.yml` | — | Phase 1 | P1 |
 
 ---
 
@@ -154,8 +160,8 @@ the stock Vite template.
 
 | Item | Assessment |
 |---|---|
-| No controller/service/repository split | Fine at 4 endpoints. Introduce the layer in Phase 2 while adding resource/need CRUD, before it becomes a rewrite. |
-| No generated Supabase types | `oneRelation` in `routes/match.ts` is an honest workaround for an untyped relation. Generate `database.types.ts` in Phase 2 and delete the workaround. |
+| No controller/service/repository split | Introduced in Phase 2 for resources (route → service → repository). Incidents, needs and match still hold their logic inline; migrate them as they next change rather than in one sweep. |
+| No generated Supabase types | `supabase gen types` needs a live project and a linked CLI, which a fresh clone does not have. `backend/src/types/db.ts` mirrors the migrations by hand in the meantime, and `asRow`/`asRows` narrow in one place. Generate and delete both once the project is provisioned. |
 | No shared types between backend and frontend | Duplication is coming. A small `shared/` package or hand-mirrored `frontend/src/types/api.ts` in Phase 2. |
 | No structured logging | `console.error` only. Swap for a request-id-carrying logger in Phase 8. |
 | No pagination | `GET /incidents` caps at 200 rows with no cursor. Fine for the demo, wrong for production. |

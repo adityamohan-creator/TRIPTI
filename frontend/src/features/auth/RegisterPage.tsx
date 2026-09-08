@@ -98,7 +98,7 @@ export function RegisterPage() {
               <label
                 key={option}
                 className={cn(
-                  'cursor-pointer rounded-lg border p-3 transition-colors',
+                  'cursor-pointer rounded-control border p-3 transition-colors',
                   role === option
                     ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30'
                     : 'border-line hover:border-line-strong',
