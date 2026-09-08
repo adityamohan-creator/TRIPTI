@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm --prefix backend run test:*)",
+      "Bash(npm --prefix backend run typecheck:*)",
+      "Bash(npm --prefix frontend run build:*)",
+      "Bash(npm --prefix frontend run lint:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(node -v)",
+      "Bash(npm -v)"
+    ],
+    "deny": [
+      "Read(./backend/.env)",
+      "Read(./frontend/.env)",
+      "Read(./frontend/.env.local)",
+      "Read(./**/.env.*)",
+      "Bash(git push --force:*)",
+      "Bash(supabase db reset:*)"
+    ]
+  }
+}
