@@ -133,36 +133,39 @@ export interface PlanPreview extends MatchPlan {
 }
 
 /**
- * How much of what was asked for this plan actually delivers.
+ * How much of what was asked for this plan actually delivers, 0-1.
  *
- * Two different questions, depending on the pool:
+ * Measured per need and then averaged, because a board mixes metered needs
+ * ("600 litres") with unmetered ones ("rescue team"), and the two cannot be
+ * summed. A metered need scores the fraction of its quantity covered; an
+ * unmetered one scores 1 if anything was matched to it and 0 otherwise.
  *
- * By quantity, where quantities exist — 300 of 600 litres is 50%.
- *
- * By need count, where they do not. Unmetered needs are common: the keyword
- * fallback never invents an amount, so a whole board can be unmetered. Scoring
- * that as 100% because every match "fully covered" an unknown quantity is how a
- * coordinator ends up believing an incident is handled when a shelter need was
- * never matched at all.
+ * The alternative — totalling quantities — quietly drops every unmetered need
+ * from the denominator. That produced a plan claiming 100% coverage while a
+ * shelter need went unmatched, twice: first when the whole board was unmetered,
+ * then again when one metered need was added beside three unmetered ones. Both
+ * times the number was arithmetically defensible and operationally a lie.
  */
 export function coverageOf(needs: Need[], matches: Match[]): number {
   if (needs.length === 0) return 0
 
-  const metered = needs.filter((n) => n.quantity != null && n.quantity > 0)
-  const required = metered.reduce((sum, n) => sum + (n.quantity ?? 0), 0)
+  const deliveredTo = new Map<string, number>()
+  const matchedNeeds = new Set<string>()
 
-  if (required === 0) {
-    const served = new Set(matches.map((m) => m.needId))
-    const answered = needs.filter((n) => served.has(n.id)).length
-    return Math.round((answered / needs.length) * 100) / 100
+  for (const match of matches) {
+    matchedNeeds.add(match.needId)
+    deliveredTo.set(match.needId, (deliveredTo.get(match.needId) ?? 0) + (match.quantity ?? 0))
   }
 
-  const meteredIds = new Set(metered.map((n) => n.id))
-  const covered = matches
-    .filter((m) => meteredIds.has(m.needId))
-    .reduce((sum, m) => sum + (m.quantity ?? 0), 0)
+  const perNeed = needs.map((need) => {
+    if (need.quantity == null || need.quantity <= 0) {
+      return matchedNeeds.has(need.id) ? 1 : 0
+    }
+    return Math.min(1, (deliveredTo.get(need.id) ?? 0) / need.quantity)
+  })
 
-  return Math.min(1, Math.round((covered / required) * 100) / 100)
+  const mean = perNeed.reduce((a, b) => a + b, 0) / perNeed.length
+  return Math.round(mean * 100) / 100
 }
 
 export async function previewPlan(now: number = Date.now()): Promise<PlanPreview> {

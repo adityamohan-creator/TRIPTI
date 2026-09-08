@@ -52,4 +52,22 @@ describe('coverageOf', () => {
   it('never exceeds 1 when a need is over-served', () => {
     expect(coverageOf([need('a', 100)], [match('a', 250)])).toBe(1)
   })
+
+  it('counts unmetered needs on a mixed board', () => {
+    // The exact live case: three unmetered needs plus one metered, with the
+    // shelter need unmatched. Totalling quantities scored this 1.0 because the
+    // single metered need was fully covered and the rest were invisible.
+    const needs = [need('water', null), need('food', null), need('shelter', null), need('bulk', 600)]
+    const coverage = coverageOf(needs, [
+      match('water', null),
+      match('food', null),
+      match('bulk', 600),
+    ])
+    expect(coverage).toBe(0.75)
+  })
+
+  it('gives partial credit for a partly filled need', () => {
+    const needs = [need('a', 600), need('b', null)]
+    expect(coverageOf(needs, [match('a', 300), match('b', null)])).toBe(0.75)
+  })
 })
