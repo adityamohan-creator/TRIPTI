@@ -71,10 +71,18 @@ export function AppShell() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            {/*
+              Responsive visibility goes on a wrapper, never on the component.
+              Badge and Button set `inline-flex` in their own base classes, and
+              cn() only concatenates — so `hidden` and `inline-flex` would both
+              land on the element, where Tailwind's source order lets
+              inline-flex win. The element stays visible and pushes the header
+              past the viewport, which is invisible on a desktop screen.
+            */}
             {profile && (
-              <Badge tone="brand" className="hidden sm:inline-flex">
-                {ROLE_LABELS[profile.role]}
-              </Badge>
+              <span className="hidden sm:block">
+                <Badge tone="brand">{ROLE_LABELS[profile.role]}</Badge>
+              </span>
             )}
             <NavLink
               to="/app/profile"
@@ -83,9 +91,11 @@ export function AppShell() {
             >
               {initials(profile?.full_name ?? null, session?.user.email)}
             </NavLink>
-            <Button variant="ghost" size="sm" onClick={onSignOut} className="hidden sm:inline-flex">
-              Sign out
-            </Button>
+            <span className="hidden sm:block">
+              <Button variant="ghost" size="sm" onClick={onSignOut}>
+                Sign out
+              </Button>
+            </span>
             <Button
               variant="ghost"
               size="sm"

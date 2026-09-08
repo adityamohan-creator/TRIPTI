@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "health": "node scripts/health-check.mjs",
-    "set-role": "node scripts/set-role.mjs"
+    "set-role": "node scripts/set-role.mjs",
+    "seed": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

@@ -183,6 +183,32 @@ A clean run ends with `All required checks passed.`
 
 ---
 
+## 9. Demo data (optional)
+
+```bash
+npm run seed
+```
+
+Creates four accounts — one per non-admin role — three resources and one
+incident, then prints the sign-in details. Everything it writes is labelled
+`DEMO` and uses the `@tripti.demo` domain, so it can find its own work again:
+
+```bash
+npm run seed -- --reset
+```
+
+The resource and incident are created by calling the running API as a signed-in
+user rather than by inserting rows, so a successful seed exercises
+authentication, authorization, extraction, need creation and the audit trail. It
+is a smoke test as much as a fixture — which is why it needs `npm run dev`
+running first.
+
+Accounts are created through the Auth admin API rather than the registration
+form, because Supabase rejects addresses it considers untrustworthy — `.test`
+and `example.com` among them — which makes the form unusable for scripted setup.
+
+---
+
 ## Troubleshooting
 
 **`unsafe use of new value "ngo" of enum type user_role`**

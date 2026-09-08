@@ -180,17 +180,41 @@ const isNetworkError = (message) =>
   )
 
 {
-  const { error } = await admin.from('profiles').select('id', { head: true })
-  if (error && isNetworkError(error.message)) {
+  // Retried, because a single probe over a flaky link produces false failures —
+  // and a false "cannot reach the database" is worse than a slow check: it
+  // sends someone looking at their project settings for a problem that is not
+  // there. Only a consistent failure is a real one.
+  const ATTEMPTS = 3
+  let lastError = null
+  let attemptsUsed = 0
+
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    attemptsUsed = attempt
+    const { error } = await admin.from('profiles').select('id', { head: true })
+    if (!error || !isNetworkError(error.message)) {
+      lastError = null
+      break
+    }
+    lastError = error
+    if (attempt < ATTEMPTS) await new Promise((r) => setTimeout(r, 800 * attempt))
+  }
+
+  const host = new URL(env.SUPABASE_URL).host
+
+  if (lastError) {
     fail(
-      `Cannot reach ${new URL(env.SUPABASE_URL).host}`,
-      `${error.message} — check your connection, and that the project is not paused. Nothing below could be checked.`,
+      `Cannot reach ${host} after ${ATTEMPTS} attempts`,
+      `${lastError.message} — check your connection, and that the project is not paused. Nothing below could be checked.`,
     )
     console.log(`
 ${RED}1 check failed.${RESET} Could not reach the database.`)
     process.exit(1)
   }
-  pass(`Reachable at ${new URL(env.SUPABASE_URL).host}`)
+
+  pass(
+    `Reachable at ${host}`,
+    attemptsUsed > 1 ? `(succeeded on attempt ${attemptsUsed} — the link is flaky)` : '',
+  )
 }
 
 // -------------------------------------------------------------- schema
