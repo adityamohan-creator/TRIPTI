@@ -63,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              'pointer-events-auto flex w-full max-w-sm gap-3 overflow-hidden rounded-card border shadow-lg',
+              'pointer-events-auto flex w-full max-w-sm gap-3 overflow-hidden rounded-card border shadow-overlay',
               TONES[toast.tone],
             )}
           >

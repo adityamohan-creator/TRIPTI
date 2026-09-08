@@ -40,24 +40,29 @@ export function AppShell() {
     navigate('/', { replace: true })
   }
 
+  // The active tab is marked by a rule under the header rather than a filled
+  // pill — quieter, and it survives being one of five tabs without the header
+  // turning into a row of coloured blocks.
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'rounded-control px-3 py-2 text-sm font-medium transition-colors',
-      isActive ? 'bg-brand-600 text-white' : 'text-ink-2 hover:bg-sunken hover:text-ink',
+      'relative -mb-px flex h-14 items-center border-b px-1 text-[13px] transition-colors',
+      isActive
+        ? 'border-ink font-medium text-ink'
+        : 'border-transparent text-ink-2 hover:text-ink',
     )
 
   return (
     <div className="min-h-screen bg-page">
-      <header className="sticky top-0 z-30 border-b border-line bg-raised/85 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-          <NavLink to="/app" className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-control bg-brand-600 text-sm font-bold text-white">
+      <header className="sticky top-0 z-30 border-b border-line bg-page/80 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
+          <NavLink to="/app" className="flex shrink-0 items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-control bg-action text-[11px] font-bold text-action-fg shadow-solid">
               T
             </span>
-            <span className="text-base font-semibold tracking-tight text-ink">TRIPTI</span>
+            <span className="text-[15px] font-semibold tracking-tight text-ink">TRIPTI</span>
           </NavLink>
 
-          <nav aria-label="Main" className="ml-4 hidden gap-1 md:flex">
+          <nav aria-label="Main" className="hidden h-14 gap-5 md:flex">
             {visible.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className={navLinkClass}>
                 {item.label}
@@ -74,7 +79,7 @@ export function AppShell() {
             <NavLink
               to="/app/profile"
               aria-label="Your profile"
-              className="grid size-9 place-items-center rounded-full border border-line bg-sunken text-xs font-semibold text-ink-2 transition-colors hover:text-ink"
+              className="grid size-7 place-items-center rounded-full border border-line bg-sunken text-[10px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
             >
               {initials(profile?.full_name ?? null, session?.user.email)}
             </NavLink>
@@ -115,7 +120,7 @@ export function AppShell() {
               <button
                 type="button"
                 onClick={onSignOut}
-                className="rounded-control px-3 py-2 text-left text-sm font-medium text-ink-2 hover:bg-sunken hover:text-ink"
+                className="rounded-control px-1 py-2 text-left text-[13px] text-ink-2 hover:text-ink"
               >
                 Sign out
               </button>
@@ -124,7 +129,7 @@ export function AppShell() {
         )}
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main className="mx-auto max-w-7xl px-4 py-8">
         {/* Signed in but role unknown — every role-gated screen will be closed,
             so say why once here rather than leaving empty panels unexplained. */}
         {profileError && (

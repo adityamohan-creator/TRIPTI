@@ -9,10 +9,10 @@ export function AuthLayout() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="flex flex-col px-6 py-10 sm:px-12">
         <Link to="/" className="flex items-center gap-2 self-start">
-          <span className="grid size-8 place-items-center rounded-control bg-brand-600 text-sm font-bold text-white">
+          <span className="grid size-7 place-items-center rounded-control bg-action text-[11px] font-bold text-action-fg shadow-solid">
             T
           </span>
-          <span className="text-base font-semibold tracking-tight text-ink">TRIPTI</span>
+          <span className="text-[15px] font-semibold tracking-tight text-ink">TRIPTI</span>
         </Link>
 
         <div className="my-auto w-full max-w-sm py-12">
@@ -21,10 +21,10 @@ export function AuthLayout() {
       </div>
 
       <aside className="relative hidden overflow-hidden bg-inverse px-12 py-16 lg:flex lg:flex-col lg:justify-center">
-        <p className="text-sm font-medium uppercase tracking-widest text-brand-300">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-inverse/50">
           Disaster response coordination
         </p>
-        <p className="mt-4 max-w-md text-3xl font-semibold leading-tight text-ink-inverse">
+        <p className="mt-5 max-w-md text-3xl font-semibold leading-[1.15] tracking-tight text-ink-inverse">
           From a report typed in panic to a truck on the road.
         </p>
         <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-inverse/70">

@@ -47,7 +47,7 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         onClick={onCancel}
         aria-hidden="true"
       />
@@ -55,7 +55,7 @@ export function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md rounded-card border border-line bg-raised p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-card border border-line bg-raised p-6 shadow-overlay"
       >
         <h2 className="text-base font-semibold text-ink">{title}</h2>
         {description && <div className="mt-2 text-sm text-ink-2">{description}</div>}

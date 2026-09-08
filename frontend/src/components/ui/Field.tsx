@@ -9,7 +9,7 @@ import { useId } from 'react'
 import { cn } from '../../lib/cn'
 
 const CONTROL =
-  'w-full rounded-control border border-line-strong bg-raised px-3 py-2 text-sm text-ink ' +
+  'w-full rounded-control border border-line-strong bg-raised px-3 text-[13px] text-ink ' +
   'placeholder:text-ink-3 transition-colors ' +
   'focus:border-brand-500 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-3 ' +
   'aria-[invalid=true]:border-danger'
@@ -31,7 +31,7 @@ function Wrapper({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
+      <label htmlFor={id} className="block text-[13px] font-medium text-ink">
         {label}
         {required && (
           <span className="ml-0.5 text-danger" aria-hidden="true">
@@ -42,12 +42,12 @@ function Wrapper({
       {children}
       {/* The hint is hidden once there is an error, so the two never compete. */}
       {error ? (
-        <p id={`${id}-error`} className="text-sm text-danger">
+        <p id={`${id}-error`} className="text-xs text-danger">
           {error}
         </p>
       ) : (
         hint && (
-          <p id={`${id}-hint`} className="text-sm text-ink-3">
+          <p id={`${id}-hint`} className="text-xs text-ink-3">
             {hint}
           </p>
         )
@@ -81,7 +81,7 @@ export function Input({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-        className={cn(CONTROL, 'h-10', className)}
+        className={cn(CONTROL, 'h-9', className)}
         {...rest}
       />
     </Wrapper>
@@ -102,7 +102,7 @@ export function Textarea({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-        className={cn(CONTROL, 'min-h-28 resize-y', className)}
+        className={cn(CONTROL, 'min-h-24 resize-y py-2', className)}
         {...rest}
       />
     </Wrapper>
@@ -124,7 +124,7 @@ export function Select({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-        className={cn(CONTROL, 'h-10', className)}
+        className={cn(CONTROL, 'h-9', className)}
         {...rest}
       >
         {children}

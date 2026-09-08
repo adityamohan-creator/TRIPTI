@@ -90,13 +90,13 @@ export function ResourceForm({ resource, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-label={editing ? 'Edit resource' : 'Add resource'}
-        className="relative flex h-full w-full max-w-md flex-col border-l border-line bg-raised"
+        className="relative flex h-full w-full max-w-md flex-col border-l border-line bg-raised shadow-overlay"
       >
         <header className="flex items-center justify-between border-b border-line px-5 py-4">
           <h2 className="text-sm font-semibold text-ink">
