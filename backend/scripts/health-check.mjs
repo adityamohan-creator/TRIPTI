@@ -115,6 +115,47 @@ if (env.SUPABASE_ANON_KEY === env.SUPABASE_SERVICE_ROLE_KEY) {
   fail('The anon key and service role key are identical', 'They are different keys — recopy them.')
 }
 
+/*
+ * The frontend and backend must point at the same project.
+ *
+ * Hand-typing a Supabase ref is how this goes wrong: a transposed pair or a
+ * dropped character produces a hostname that simply does not resolve, and the
+ * only symptom is an opaque "Failed to fetch" in the browser while every
+ * server-side check here passes. Comparing the two files catches it in a second
+ * instead of an afternoon.
+ */
+const frontendEnv =
+  readEnvFile(join(backendDir, '..', 'frontend', '.env.local')) ?? {}
+
+if (!frontendEnv.VITE_SUPABASE_URL) {
+  warn(
+    'frontend/.env.local not found or has no VITE_SUPABASE_URL',
+    'The browser cannot reach Supabase without it.',
+  )
+} else if (isPlaceholder(frontendEnv.VITE_SUPABASE_URL)) {
+  fail(
+    'frontend/.env.local still holds the placeholder URL',
+    'The app will render the setup screen instead of signing anyone in.',
+  )
+} else if (frontendEnv.VITE_SUPABASE_URL.trim() !== env.SUPABASE_URL.trim()) {
+  fail(
+    'frontend and backend point at different projects',
+    `backend  ${env.SUPABASE_URL}
+      frontend ${frontendEnv.VITE_SUPABASE_URL}
+      Copy the URL from the dashboard rather than typing it.`,
+  )
+} else if (
+  frontendEnv.VITE_SUPABASE_ANON_KEY &&
+  frontendEnv.VITE_SUPABASE_ANON_KEY.trim() !== env.SUPABASE_ANON_KEY.trim()
+) {
+  warn(
+    'frontend and backend carry different anon keys',
+    'Not fatal, but one of them is probably stale.',
+  )
+} else {
+  pass('frontend/.env.local matches the backend project')
+}
+
 const admin = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 })
