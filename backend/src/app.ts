@@ -7,6 +7,7 @@ import { generalLimiter } from './middleware/rateLimit.js'
 import { incidentsRouter } from './routes/incidents.js'
 import { matchRouter } from './routes/match.js'
 import { needsRouter } from './routes/needs.js'
+import { plansRouter } from './routes/plans.js'
 import { profileRouter } from './routes/profile.js'
 import { resourcesRouter } from './routes/resources.js'
 
@@ -45,6 +46,7 @@ export function createApp() {
   app.use('/api/incidents', incidentsRouter)
   app.use('/api/needs', needsRouter)
   app.use('/api/resources', resourcesRouter)
+  app.use('/api/plans', plansRouter)
   app.use('/api/match', matchRouter)
 
   app.use((_req, res) => {

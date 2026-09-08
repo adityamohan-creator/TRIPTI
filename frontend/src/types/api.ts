@@ -192,3 +192,81 @@ export interface ExtractionResponse {
   source: ExtractionSource
   degradedReason?: string
 }
+
+// ------------------------------------------------------------ matching
+
+export interface MatchTerm {
+  key: string
+  label: string
+  normalised: number
+  weight: number
+  points: number
+  detail: string
+}
+
+export interface ProposedMatch {
+  needId: string
+  resourceId: string
+  quantity: number | null
+  distanceKm: number
+  score: number
+  needPriority: number
+  terms: MatchTerm[]
+}
+
+export interface PlanPreview {
+  matches: ProposedMatch[]
+  unmatched: { needId: string; reason: string }[]
+  needsMissingCoordinates: string[]
+  resourcesMissingCoordinates: string[]
+  /** 0-1. */
+  coverage: number
+  weights: Record<string, number>
+}
+
+export type PlanStatus = 'proposed' | 'approved' | 'discarded'
+
+export interface ResponsePlan {
+  id: string
+  label: string | null
+  status: PlanStatus
+  weights: Record<string, number>
+  unmatched: { needId: string; reason: string }[]
+  coverage: number | null
+  created_by: string | null
+  approved_by: string | null
+  approved_at: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** A stored match, joined to the need and resource it pairs. */
+export interface PlanMatch {
+  id: string
+  need_id: string
+  resource_id: string
+  score: number
+  allocated_quantity: number | null
+  distance_km: number | null
+  rationale: { needPriority?: number; terms?: MatchTerm[] } | null
+  status: string
+  needs?: {
+    kind: string
+    unit: string | null
+    incidents?: { summary: string | null; severity: Severity; location_text: string | null } | null
+  } | null
+  resources?: {
+    label: string
+    kind: string
+    unit: string | null
+    address: string | null
+    expiry_time: string | null
+    perishable: boolean
+  } | null
+}
+
+export interface PlanDetail {
+  plan: ResponsePlan
+  matches: PlanMatch[]
+}

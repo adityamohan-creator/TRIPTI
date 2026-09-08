@@ -43,6 +43,11 @@ const STEPS = [
     ],
     note: 'Run this only after step 1 has completed successfully.',
   },
+  {
+    file: 'step-3.sql',
+    includes: ['0006_response_plans.sql'],
+    note: 'Response plans and reservations. Safe to run on its own if steps 1 and 2 are already applied.',
+  },
 ]
 
 const available = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql'))

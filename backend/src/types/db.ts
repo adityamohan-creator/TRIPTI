@@ -74,3 +74,32 @@ export interface MatchRow {
   created_at: string
   updated_at: string
 }
+
+/** A match as it comes back joined to its need, incident and resource. */
+export interface PlanMatchRow {
+  id: string
+  need_id: string
+  resource_id: string
+  score: number
+  allocated_quantity: number | null
+  distance_km: number | null
+  rationale: { needPriority?: number; terms?: unknown[] } | null
+  status: MatchStatus
+  needs?: unknown
+  resources?: unknown
+}
+
+export interface ResponsePlanRow {
+  id: string
+  label: string | null
+  status: 'proposed' | 'approved' | 'discarded'
+  weights: Record<string, number>
+  unmatched: { needId: string; reason: string }[]
+  coverage: number | null
+  created_by: string | null
+  approved_by: string | null
+  approved_at: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+}

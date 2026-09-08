@@ -1,10 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ProfilePage } from '../features/auth/ProfilePage'
-import { ProtectedRoute } from '../features/auth/ProtectedRoute'
+import { ProtectedRoute, RoleRoute } from '../features/auth/ProtectedRoute'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { IncidentDetailPage } from '../features/incidents/IncidentDetailPage'
 import { ReportPage } from '../features/incidents/ReportPage'
+import { PlanningPage } from '../features/plans/PlanningPage'
 import { ResourcesPage } from '../features/resources/ResourcesPage'
 import { AppShell } from '../layouts/AppShell'
 import { AuthLayout } from '../layouts/AuthLayout'
@@ -42,6 +43,14 @@ export function AppRoutes() {
         <Route path="incidents/new" element={<ReportPage />} />
         <Route path="incidents/:id" element={<IncidentDetailPage />} />
         <Route path="resources" element={<ResourcesPage />} />
+        <Route
+          path="planning"
+          element={
+            <RoleRoute allow={['coordinator', 'admin']}>
+              <PlanningPage />
+            </RoleRoute>
+          }
+        />
         <Route path="missions" element={<Missions />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>

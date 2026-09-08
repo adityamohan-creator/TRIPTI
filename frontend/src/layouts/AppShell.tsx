@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { to: '/app', label: 'Overview', end: true },
   { to: '/app/incidents', label: 'Incidents' },
   { to: '/app/resources', label: 'Resources' },
+  { to: '/app/planning', label: 'Planning', roles: ['coordinator', 'admin'] },
   { to: '/app/missions', label: 'Missions' },
 ]
 
