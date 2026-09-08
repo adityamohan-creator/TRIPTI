@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "health": "node scripts/health-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

@@ -100,7 +100,7 @@ export function RegisterPage() {
                 className={cn(
                   'cursor-pointer rounded-control border p-3 transition-colors',
                   role === option
-                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30'
+                    ? 'border-brand-600 bg-brand-100 dark:border-brand-400 dark:bg-brand-900/40'
                     : 'border-line hover:border-line-strong',
                 )}
               >

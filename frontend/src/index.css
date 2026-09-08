@@ -3,115 +3,129 @@
 /* Leaflet's stylesheet has to load globally or tiles/controls render unstyled. */
 @import 'leaflet/dist/leaflet.css';
 
+/*
+ * Palette: #2A7C13 deep green, #76C457 mid green, #FFF8CF cream, #FBE6C2 peach.
+ *
+ * Green means "an action you can take" — buttons, links, focus, success. It
+ * never means a severity. That separation matters here: the severity ramp is
+ * safety information, and a green brand sitting beside a green "low" badge
+ * makes a coordinator read colour twice. Low severity is therefore neutral
+ * slate, which says "nothing special" without competing for the same meaning.
+ */
 @theme {
-  /* Accent. Used for links, focus and the severity-free "this is interactive"
-     signal — never as a page-wide wash. Primary actions are monochrome. */
-  --color-brand-50: #f0f6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #93c5fd;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-800: #1e40af;
-  --color-brand-900: #172554;
+  --color-brand-50: #f4faf0;
+  --color-brand-100: #e4f4dc;
+  --color-brand-200: #c8e8ba;
+  --color-brand-300: #a2d888;
+  --color-brand-400: #76c457;
+  --color-brand-500: #56a836;
+  --color-brand-600: #3e8f20;
+  --color-brand-700: #2a7c13;
+  --color-brand-800: #216010;
+  --color-brand-900: #17430b;
 
-  /* Incident severity ramp. Used by map markers, badges and charts alike, so a
-     colour change here updates all three at once. Never hardcode a red. */
-  --color-sev-low: oklch(0.62 0.13 155);
-  --color-sev-medium: oklch(0.68 0.14 75);
-  --color-sev-high: oklch(0.63 0.19 45);
-  --color-sev-critical: oklch(0.55 0.22 25);
+  --color-cream: #fff8cf;
+  --color-peach: #fbe6c2;
 
-  --color-sev-low-soft: oklch(0.96 0.03 155);
-  --color-sev-medium-soft: oklch(0.96 0.04 75);
-  --color-sev-high-soft: oklch(0.96 0.04 45);
-  --color-sev-critical-soft: oklch(0.95 0.04 25);
+  /* Severity ramp. Used by map markers, badges and charts alike, so a change
+     here updates all three at once. Never hardcode a red. */
+  --color-sev-low: oklch(0.52 0.02 240);
+  --color-sev-medium: oklch(0.63 0.13 75);
+  --color-sev-high: oklch(0.6 0.18 45);
+  --color-sev-critical: oklch(0.53 0.22 27);
 
-  --color-positive: oklch(0.6 0.14 155);
-  --color-warning: oklch(0.66 0.14 70);
-  --color-danger: oklch(0.57 0.2 27);
+  --color-sev-low-soft: oklch(0.94 0.005 240);
+  --color-sev-medium-soft: oklch(0.94 0.06 80);
+  --color-sev-high-soft: oklch(0.93 0.06 45);
+  --color-sev-critical-soft: oklch(0.92 0.06 27);
+
+  --color-positive: #3e8f20;
+  --color-warning: oklch(0.6 0.14 70);
+  --color-danger: oklch(0.53 0.21 27);
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
 
-  /* Restrained radii. Operational software reads as a tool, not a toy — the
-     large pill shapes that make a marketing page feel friendly make a dispatch
-     board feel unserious. */
+  /* Restrained radii. Operational software reads as a tool, not a toy. */
   --radius-card: 0.5rem;
   --radius-control: 0.375rem;
 }
 
-/* Semantic surfaces. Components reference these rather than picking a grey, so
-   light and dark stay consistent without a variant on every element.
-   Near-monochrome on purpose: contrast and spacing carry the hierarchy, and
-   colour is left free to mean something (severity, failure, deadline). */
+/* Semantic surfaces. Components reference these rather than picking a colour,
+   so light and dark stay consistent without a variant on every element. */
 :root {
   color-scheme: light dark;
 
-  --surface-page: #ffffff;
+  /* Cream page, white cards. The cards lift off the warm ground without needing
+     a shadow to do it. */
+  --surface-page: #fff8cf;
   --surface-raised: #ffffff;
-  --surface-sunken: #fafafa;
-  --surface-inverse: #0a0a0a;
+  --surface-sunken: #fbe6c2;
+  --surface-inverse: #17430b;
 
-  --border-subtle: #ebebeb;
-  --border-strong: #d4d4d4;
+  --border-subtle: #ecdcb2;
+  --border-strong: #d8c288;
 
-  --text-primary: #0a0a0a;
-  --text-secondary: #666666;
-  --text-muted: #8f8f8f;
-  --text-inverse: #fafafa;
+  --text-primary: #16210f;
+  --text-secondary: #57604e;
+  --text-muted: #837f6b;
+  --text-inverse: #fff8cf;
 
-  /* Solid actions invert the page rather than picking a brand colour: black on
-     white, white on black. It is the highest contrast available, so the primary
-     action is unmistakable without shouting in colour. */
-  --action-bg: #0a0a0a;
-  --action-bg-hover: #383838;
-  --action-fg: #ffffff;
+  /* Solid actions carry the deep green with cream on top — the palette's own
+     highest-contrast pair. */
+  --action-bg: #2a7c13;
+  --action-bg-hover: #216010;
+  --action-fg: #fff8cf;
 
-  /* The "glossy" part: a hairline highlight along the top edge and a shadow
-     tight enough to read as a raised surface rather than a drop shadow. */
+  /* A hairline highlight along the top edge and a shadow tight enough to read
+     as a raised surface rather than a drop shadow. */
   --gloss-solid:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.14), 0 1px 2px 0 rgb(0 0 0 / 0.16);
-  --gloss-raised: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 1px -1px rgb(0 0 0 / 0.06);
+    inset 0 1px 0 0 rgb(255 255 255 / 0.2), 0 1px 2px 0 rgb(23 67 11 / 0.24);
+  --gloss-raised:
+    0 1px 2px 0 rgb(90 70 20 / 0.05), 0 1px 1px -1px rgb(90 70 20 / 0.07);
   --gloss-overlay:
-    0 0 0 1px rgb(0 0 0 / 0.04), 0 10px 20px -6px rgb(0 0 0 / 0.14),
-    0 24px 48px -12px rgb(0 0 0 / 0.14);
+    0 0 0 1px rgb(23 67 11 / 0.06), 0 10px 20px -6px rgb(23 67 11 / 0.16),
+    0 24px 48px -12px rgb(23 67 11 / 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface-page: #000000;
-    --surface-raised: #0a0a0a;
-    --surface-sunken: #161616;
-    --surface-inverse: #fafafa;
+    /* Near-black with a green cast, so the dark theme is recognisably the same
+       product rather than a generic grey one. */
+    --surface-page: #0d1109;
+    --surface-raised: #141a10;
+    --surface-sunken: #1b2216;
+    --surface-inverse: #fff8cf;
 
-    --border-subtle: #232323;
-    --border-strong: #343434;
+    --border-subtle: #262e1e;
+    --border-strong: #36402b;
 
-    --text-primary: #ededed;
-    --text-secondary: #a1a1a1;
-    --text-muted: #7a7a7a;
-    --text-inverse: #0a0a0a;
+    --text-primary: #edefe3;
+    --text-secondary: #a4ac97;
+    --text-muted: #78806c;
+    --text-inverse: #101409;
 
-    --action-bg: #ededed;
-    --action-bg-hover: #ffffff;
-    --action-fg: #0a0a0a;
+    /* Deep green disappears on a dark ground, so the action flips to the mid
+       green with dark text on top. */
+    --action-bg: #76c457;
+    --action-bg-hover: #8fd473;
+    --action-fg: #10180a;
 
-    --gloss-solid: inset 0 1px 0 0 rgb(255 255 255 / 0.2);
+    --gloss-solid: inset 0 1px 0 0 rgb(255 255 255 / 0.22);
     --gloss-raised: none;
     --gloss-overlay:
       0 0 0 1px rgb(255 255 255 / 0.06), 0 16px 40px -8px rgb(0 0 0 / 0.8);
 
     /* The soft severity fills need to be dark tints, not pale washes, or a
-       critical badge glows white on a dark board. */
-    --color-sev-low-soft: oklch(0.26 0.05 155);
-    --color-sev-medium-soft: oklch(0.28 0.06 75);
+       critical badge glows on a dark board. */
+    --color-sev-low-soft: oklch(0.28 0.01 240);
+    --color-sev-medium-soft: oklch(0.28 0.06 80);
     --color-sev-high-soft: oklch(0.28 0.07 45);
-    --color-sev-critical-soft: oklch(0.29 0.08 25);
+    --color-sev-critical-soft: oklch(0.29 0.08 27);
+
+    --color-positive: #76c457;
   }
 }
 
@@ -164,7 +178,7 @@ body {
 /* One focus treatment everywhere, so keyboard navigation is legible on every
    surface without each component reinventing it. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
   border-radius: var(--radius-control);
 }
@@ -179,7 +193,7 @@ body {
   pointer-events: none;
   background: radial-gradient(
     60% 60% at 50% 0%,
-    color-mix(in oklab, var(--color-brand-500) 12%, transparent) 0%,
+    color-mix(in oklab, var(--color-brand-400) 22%, transparent) 0%,
     transparent 70%
   );
 }

@@ -20,27 +20,17 @@ deterministic engine and dispatched as missions.
 npm run install:all
 ```
 
-Then create a Supabase project and run the migrations in `supabase/migrations/`
-in filename order. Run `0002_roles.sql` on its own and let it commit before
-`0003_auth_and_integrity.sql` — Postgres will not let a newly added enum value be
-used in the transaction that added it.
-
-Fill in the env files:
+Then follow **[docs/SETUP.md](docs/SETUP.md)** — migrations, keys, env files and
+the first coordinator account, in order. It takes about ten minutes.
 
 ```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
+npm run dev     # API on :4000, web on :5173
+npm run health  # verifies migrations, roles and RLS actually applied
 ```
 
-`backend/.env` needs the Supabase URL, anon key, **service role key**, and an
-Anthropic API key. `frontend/.env.local` needs the URL and anon key only.
-
-```bash
-npm run dev
-```
-
-API on http://localhost:4000, web on http://localhost:5173 (proxying `/api` to
-the API, so there's no CORS in dev).
+`npm run health` is the one to run after any setup or deploy. It checks the
+failures that are silent: a migration whose `ALTER`s did not run, a missing enum
+value, or an anon key that can reach reporter phone numbers.
 
 ## Roles
 
@@ -68,6 +58,7 @@ role change made with a user's own token.
 | `npm run typecheck` | Backend `tsc --noEmit` + frontend `tsc -b`  |
 | `npm run build`     | Production build of both                    |
 | `npm run lint`      | Frontend oxlint                             |
+| `npm run health`    | Verify Supabase schema, roles and RLS       |
 
 CI (`.github/workflows/ci.yml`) runs install → lint → test → typecheck + build on
 every push and pull request.
