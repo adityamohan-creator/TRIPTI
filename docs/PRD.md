@@ -1,4 +1,4 @@
-# TRIPTI / CrisisConnect AI — Product Requirements
+# TRIPTI — Product Requirements
 
 > Source of truth. Authored by Aditya Mohan. Transcribed here so the repository
 > carries its own specification. Where implementation decisions narrow or
