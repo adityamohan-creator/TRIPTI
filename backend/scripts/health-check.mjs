@@ -80,20 +80,28 @@ if (!backendEnv) {
 
 const env = { ...backendEnv, ...process.env }
 
-const REQUIRED = [
-  'SUPABASE_URL',
-  'SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'ANTHROPIC_API_KEY',
-]
+const REQUIRED = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']
+
+const isPlaceholder = (value) =>
+  !value || value.startsWith('your-') || value.includes('your-project')
 
 for (const key of REQUIRED) {
-  const value = env[key]
-  if (!value || value.startsWith('your-') || value.includes('your-project')) {
+  if (isPlaceholder(env[key])) {
     fail(`${key} is not set`, 'Still holding the placeholder from .env.example.')
   } else {
-    pass(key, `${value.slice(0, 8)}…`)
+    pass(key, `${env[key].slice(0, 8)}…`)
   }
+}
+
+// Optional. Without it the app runs on the deterministic keyword fallback —
+// degraded, but working, which is why this is a warning and not a failure.
+if (isPlaceholder(env.ANTHROPIC_API_KEY)) {
+  warn(
+    'ANTHROPIC_API_KEY is not set',
+    'Extraction falls back to a keyword scan; incidents are flagged for manual triage.',
+  )
+} else {
+  pass('ANTHROPIC_API_KEY', `${env.ANTHROPIC_API_KEY.slice(0, 8)}…`)
 }
 
 if (failures > 0) {

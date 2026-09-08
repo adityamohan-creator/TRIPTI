@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { extractIncident } from './extractIncident.js'
 import { fallbackExtract } from './fallback.js'
-import type { ExtractedIncident, ExtractionProvider } from './types.js'
+import {
+  ExtractedIncident as ExtractedIncidentSchema,
+  type ExtractedIncident,
+  type ExtractionProvider,
+} from './types.js'
 
 const REPORT =
   'Flooding near Sector 62. Around 300 people are affected. Food and drinking water are urgently needed.'
@@ -126,6 +130,15 @@ describe('fallbackExtract', () => {
     const result = fallbackExtract(REPORT)
     expect(result.confidence).toBe(0)
     expect(result.unclear.join(' ')).toMatch(/unavailable/i)
+  })
+
+  it('produces output that satisfies the same schema as the model path', () => {
+    // Running with no API key is a supported mode, so the fallback's shape is
+    // load-bearing: if it ever drifts from ExtractedIncident, every incident
+    // created without a key would fail to insert.
+    for (const text of [REPORT, '', 'Fire. Trapped people. Critical.']) {
+      expect(ExtractedIncidentSchema.safeParse(fallbackExtract(text)).success).toBe(true)
+    }
   })
 
   it('handles an empty report without throwing', () => {

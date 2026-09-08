@@ -16,9 +16,22 @@ export type { ExtractionResult, ExtractionSource } from './types.js'
  * including the fallback path whose entire job is to work when the model does
  * not — impossible to load without a full set of API keys.
  */
-async function defaultProvider(): Promise<ExtractionProvider> {
-  const { anthropicProvider } = await import('./anthropic.provider.js')
-  return anthropicProvider
+async function defaultProvider(): Promise<ExtractionProvider | null> {
+  const [{ anthropicProvider }, { isModelConfigured }] = await Promise.all([
+    import('./anthropic.provider.js'),
+    import('./client.js'),
+  ])
+  return isModelConfigured ? anthropicProvider : null
+}
+
+/** The keyword scan, packaged as a result. */
+function degraded(reportText: string, reason: string): ExtractionResult {
+  return {
+    extraction: fallbackExtract(reportText),
+    source: 'fallback',
+    provider: 'deterministic-keyword-scan',
+    degradedReason: reason,
+  }
 }
 
 /** A slow extraction is a failed extraction — someone is waiting on this. */
@@ -52,6 +65,13 @@ export async function extractIncident(
   let provider: ExtractionProvider | null = null
   try {
     provider = override ?? (await defaultProvider())
+
+    // No key configured. This is a deliberate operating mode, not a failure, so
+    // it degrades quietly rather than logging an error on every report.
+    if (!provider) {
+      return degraded(reportText, 'No ANTHROPIC_API_KEY configured')
+    }
+
     const raw = await withTimeout(provider.extract(reportText), TIMEOUT_MS)
 
     // Validate even though the provider claims to have done so. A provider is
@@ -65,12 +85,6 @@ export async function extractIncident(
   } catch (err) {
     const reason = err instanceof Error ? err.message : 'Unknown extraction failure'
     console.error('AI extraction failed, falling back to keyword scan:', reason)
-
-    return {
-      extraction: fallbackExtract(reportText),
-      source: 'fallback',
-      provider: 'deterministic-keyword-scan',
-      degradedReason: reason,
-    }
+    return degraded(reportText, reason)
   }
 }

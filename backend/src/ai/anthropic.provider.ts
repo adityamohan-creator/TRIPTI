@@ -30,6 +30,8 @@ export const anthropicProvider: ExtractionProvider = {
   name: `anthropic:${MODEL}`,
 
   async extract(reportText) {
+    if (!anthropic) throw new Error('No ANTHROPIC_API_KEY configured')
+
     const message = await anthropic.messages.parse({
       model: MODEL,
       max_tokens: 4096,

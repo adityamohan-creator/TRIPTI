@@ -55,9 +55,22 @@ the secret one is the server key.
 `VITE_` variable, a frontend file, or a commit. If it leaks, rotate it in the
 dashboard immediately.
 
-You also need an **Anthropic API key** from
-[console.anthropic.com](https://console.anthropic.com) for incident extraction.
-Without it the backend will not boot.
+### The Anthropic key is optional
+
+An **Anthropic API key** from [console.anthropic.com](https://console.anthropic.com)
+gives you real extraction: a report in any language becomes a category,
+severity, headcount, needs and a confidence score.
+
+**You can finish this setup without one.** Leave `ANTHROPIC_API_KEY` unset and
+extraction falls back to the deterministic keyword scan in `ai/fallback.ts` —
+the same path that covers an API outage. Reports are still accepted, matching
+and missions still work, and every incident is marked `ai_source: fallback` with
+`confidence: 0` so a coordinator knows nothing has read it. The server says so
+loudly at boot.
+
+The API is paid — there is no free tier, though new accounts may carry trial
+credit (check Billing in the console). At Opus 5 rates a report costs roughly
+**$0.02**, so a demo costs cents.
 
 ---
 
@@ -74,8 +87,10 @@ cp frontend/.env.example frontend/.env.local
 SUPABASE_URL=https://<your-ref>.supabase.co
 SUPABASE_ANON_KEY=<publishable key>
 SUPABASE_SERVICE_ROLE_KEY=<secret key>
-ANTHROPIC_API_KEY=sk-ant-...
 CORS_ORIGINS=http://localhost:5173
+
+# Optional — omit this line entirely to run on the keyword fallback.
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 `frontend/.env.local`:
@@ -163,8 +178,13 @@ A clean run ends with `All required checks passed.`
 **`infinite recursion detected in policy for relation "profiles"`**
 `0003` has not been applied. It replaces the recursive policy from `0001`.
 
+**"No ANTHROPIC_API_KEY set — running with keyword extraction only"**
+Expected when you have not added a key. Everything works; extraction is
+keyword-based and every incident is flagged for manual triage.
+
 **Backend exits with "Invalid environment configuration"**
-`backend/.env` is incomplete; the message names the missing keys. This is
+`backend/.env` is incomplete; the message names the missing keys. The Anthropic
+key is never one of them — it is optional. This is
 deliberate — a half-configured server in a disaster-response tool is worse than
 one that refuses to start.
 
