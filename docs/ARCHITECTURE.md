@@ -1,6 +1,6 @@
 # TRIPTI — Architecture
 
-Status: **Phase 0 (audit)**. This document describes both what exists today and
+Status: **Phase 1 complete**. This document describes both what exists today and
 the target architecture the remaining phases build toward. Sections marked
 `[built]` are working code; `[planned]` is not implemented yet.
 
@@ -105,6 +105,10 @@ backend/src
   config.ts            zod-validated env, throws at boot on anything missing
   supabase.ts          admin client + token verifier
   middleware/auth.ts   requireAuth / requireRole, ROLES
+  middleware/rateLimit.ts  general + AI-route buckets
+  lib/
+    errors.ts          AppError — deliberate, client-safe failures
+    history.ts         the only writer to the append-only audit trail
   ai/
     client.ts          Anthropic client + single MODEL constant
     extractIncident.ts free text -> structured incident proposal
@@ -113,9 +117,10 @@ backend/src
     match.ts           greedy need->resource matcher (pure)
     match.test.ts      13 tests
   routes/
-    incidents.ts       GET /, POST /, PATCH /:id
+    incidents.ts       GET /, POST /, GET /:id, PATCH /:id
+    profile.ts         GET /, PATCH /, GET /all, PATCH /:id/role
     match.ts           POST /preview
-  app.ts               middleware, mounts, 404, central error handler
+  app.ts               helmet, CORS, limits, mounts, /health, error handler
   server.ts            listen
 ```
 
@@ -149,15 +154,17 @@ lib/           logger, errors (AppError with status + safe message)
 **Rule:** nothing in `engine/` may import from `ai/`, `routes/`, or `supabase.ts`.
 That isolation is what makes allocation explainable and testable.
 
-### 5.3 Error handling `[built, to extend]`
+### 5.3 Error handling `[built]`
 
-Handlers call `next(err)`. `app.ts` logs the detail and returns
-`{ error: 'Internal server error' }`. Validation failures return `400` with a
-generic message — zod errors are never echoed to the client, because they
-describe internal field names and shapes.
+Handlers call `next(err)`. `app.ts` distinguishes two cases:
 
-Planned: an `AppError` class so a service can raise a *deliberate* 4xx with a
-safe user-facing message, distinguishable from an unexpected throw.
+- **`AppError`** (`lib/errors.ts`) — a deliberate failure whose message was
+  written for a user to read. Passed through with its status.
+- **Anything else** — a bug. Detail goes to the log, the caller gets
+  `{ error: 'Internal server error' }`.
+
+Validation failures return `400` with a generic message; zod errors are never
+echoed to the client, because they describe internal field names and shapes.
 
 ---
 
@@ -270,9 +277,19 @@ mutable audit table cannot do that.
 
 ### 9.1 Current `[built]`
 
-React 19 + Vite + Tailwind v4 + React Router. `lib/api.ts` attaches the Supabase
-access token to every backend call. `lib/supabase.ts` holds the anon-key browser
-client. Four route components exist and are **placeholders**.
+React 19 + Vite + Tailwind v4 + React Router.
+
+- `components/ui/` — Button, Card, Badge (+ Severity/Status), Field (Input,
+  Textarea, Select), Alert, Spinner, Skeleton, EmptyState, ErrorState,
+  ConfirmDialog, Toast provider.
+- `features/auth/` — `AuthProvider` (session + authoritative profile),
+  `ProtectedRoute`, `RoleRoute`, sign-in, registration with role selection,
+  profile editing.
+- `layouts/` — `AppShell` (responsive nav, role badge, sign-out) and
+  `AuthLayout`.
+- `pages/` — landing, dashboard (live counts), incidents (live list). Resources
+  and missions are honest empty states, not mocked data.
+- `hooks/useAsync.ts` — the loading / empty / error / retry contract in one place.
 
 ### 9.2 Target `[planned]`
 
@@ -369,15 +386,15 @@ A committed, in-progress, life-critical mission is never disrupted automatically
 | ---------------------- | ------------------------------------------------ |
 | Auth                   | Supabase Auth, JWT bearer `[built, backend only]` |
 | Role source            | `profiles` table, never the token `[built]`       |
-| RLS                    | Enabled on every table `[built]` — see gap #1     |
+| RLS                    | Enabled on every table `[built]`; recursion bug fixed in 0003 |
 | Input validation       | zod at every route boundary `[built]`             |
 | Error leakage          | Generic messages, detail to logs `[built]`        |
 | Secrets                | `.env`, gitignored, `.env.example` committed `[built]` |
 | CORS                   | Explicit origin allowlist `[built]`               |
-| Rate limiting          | `[planned]`                                       |
-| Secure headers         | `[planned]` helmet                                |
-| Audit log              | `status_history` table exists, nothing writes to it `[gap]` |
-| PII exposure           | Reporter phone stored; not yet restricted by role `[gap]` |
+| Rate limiting          | 120/min general, 10/min on AI intake `[built]`    |
+| Secure headers         | helmet `[built]`                                  |
+| Audit log              | `lib/history.ts` writes on incident create + triage `[built]`; missions pending |
+| PII exposure           | Moved to `incident_contacts`, backend-only, no RLS policy `[built]` |
 
 ---
 
@@ -389,8 +406,11 @@ A committed, in-progress, life-critical mission is never disrupted automatically
 | Backend  | Render / Railway   | Set `CORS_ORIGINS` to the deployed frontend origin |
 | Database | Supabase           | Run migrations in order via SQL editor or CLI     |
 
-Health check: `GET /health` must return `{"status":"ok"}` for platform probes.
-Currently only `GET /api/health` exists returning a different shape — see gap #3.
+Health check: `GET /health` returns `{"status":"ok"}` for platform probes, with
+the same handler mounted at `/api/health` for the frontend's dev proxy `[built]`.
+
+CI runs install → lint → test → typecheck+build on every push and PR
+(`.github/workflows/ci.yml`) `[built]`.
 
 ---
 

@@ -1,7 +1,22 @@
 import type { NextFunction, Request, Response } from 'express'
 import { admin, verifyAccessToken } from '../supabase.js'
 
-export const ROLES = ['viewer', 'volunteer', 'donor', 'coordinator', 'admin'] as const
+/**
+ * The PRD's six roles. 'coordinator' is the PRD's "Emergency Operator"; the rest
+ * map one to one. Order is meaningful only as documentation — authorization is
+ * an explicit allowlist per route, never a rank comparison.
+ */
+export const ROLES = [
+  'citizen',
+  'volunteer',
+  'donor',
+  'ngo',
+  'coordinator',
+  'admin',
+] as const
+
+/** Roles a user may choose for themselves at signup. Mirrors handle_new_user(). */
+export const SELF_SERVICE_ROLES = ['citizen', 'volunteer', 'donor', 'ngo'] as const
 export type Role = (typeof ROLES)[number]
 
 export interface AuthUser {
@@ -53,7 +68,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   req.user = {
     id: user.id,
     email: user.email,
-    role: (profile.role ?? 'viewer') as Role,
+    role: (profile.role ?? 'citizen') as Role,
   }
   next()
 }

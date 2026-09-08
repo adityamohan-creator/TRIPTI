@@ -30,8 +30,17 @@ the root package only orchestrates).
 ### 2.1 Database
 
 Create a Supabase project, open the SQL editor, and run every file in
-`supabase/migrations/` **in filename order**. Currently that is just
-`0001_init.sql`.
+`supabase/migrations/` **in filename order**:
+
+| File | What it does |
+| ---- | ------------ |
+| `0001_init.sql` | Tables, enums, RLS, realtime publication |
+| `0002_roles.sql` | Renames `viewer`→`citizen`, adds `ngo` |
+| `0003_auth_and_integrity.sql` | Role pinning, `updated_at` triggers, PII split, signup roles |
+
+**Run `0002` on its own and let it commit before running `0003`.** Postgres does
+not allow a newly added enum value to be used in the same transaction that added
+it, and `0003` references `'ngo'`.
 
 Then grab three values from Project Settings → API:
 
@@ -170,12 +179,13 @@ New scoring or matching behaviour ships **with** its test in the same change.
 
 ## 6. Git
 
-No commits on this repository yet. From here:
-
 ```bash
 git add .
 git commit -m "feat: <what changed>"
 ```
+
+CI runs on every push and PR: install → lint → test → typecheck + build. A red
+build blocks nothing automatically, but do not merge on top of one.
 
 Conventional prefixes: `feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`.
 
@@ -192,11 +202,6 @@ commit anyway.
 failed. This is deliberate — a half-configured server in a disaster-response tool
 is worse than one that refuses to start.
 
-**Frontend white-screens on load**
-`lib/supabase.ts` throws at module scope when `VITE_SUPABASE_URL` or
-`VITE_SUPABASE_ANON_KEY` is missing, which kills the whole bundle. Check
-`frontend/.env.local`, and restart Vite — env changes are not hot-reloaded.
-
 **`Cannot find module './config'` in the backend**
 Add the `.js` extension: `./config.js`. Required by `nodenext`, even though the
 source file is `.ts`.
@@ -206,9 +211,18 @@ The auth user exists but has no `profiles` row. The `on_auth_user_created`
 trigger creates one automatically — if the user predates the migration, insert
 the profile manually.
 
-**Everything 401s from the browser**
-The Supabase session is missing or expired. `lib/api.ts` attaches the token only
-when a session exists; it does not currently redirect on 401 (Phase 1 work).
+**The app shows "TRIPTI is not configured yet"**
+`frontend/.env.local` is missing or incomplete. The screen lists exactly which
+variables to set. Restart Vite afterwards — env changes are not hot-reloaded.
+
+**Signed in, but every role-gated screen says the role could not be confirmed**
+The session is valid but `GET /api/profile` failed, so the browser has no
+authoritative role and fails closed. Usually the backend is not running, or the
+account has no `profiles` row.
+
+**`infinite recursion detected in policy for relation "profiles"`**
+Migration `0003` has not been applied. It replaces the recursive policy from
+`0001` with a trigger.
 
 ---
 
@@ -216,8 +230,26 @@ when a session exists; it does not currently redirect on 401 (Phase 1 work).
 
 ```
 backend/                Express API, AI layer, decision engine
-frontend/               React SPA
+frontend/               React SPA — design system, auth, screens
 supabase/migrations/    Schema, RLS policies, realtime publication
 docs/                   This directory
+.github/workflows/      CI: lint -> test -> typecheck -> build
 CLAUDE.md               Constraints that override defaults — read it
 ```
+
+## 9. Roles
+
+Six roles, from the PRD. Four can be chosen at signup; two are granted.
+
+| Role | Chosen at signup? | Granted by |
+| ---- | ----------------- | ---------- |
+| `citizen` | yes (default) | — |
+| `volunteer` | yes | — |
+| `donor` | yes | — |
+| `ngo` | yes | — |
+| `coordinator` | **no** | an admin, via `PATCH /api/profile/:id/role` |
+| `admin` | **no** | an admin |
+
+The clamp is enforced in three places on purpose: the signup form only offers
+four options, `handle_new_user()` in the database ignores anything else, and the
+`profiles_pin_role` trigger rejects a role change made with a user's own token.

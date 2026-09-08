@@ -20,8 +20,12 @@ deterministic engine and dispatched as missions.
 npm run install:all
 ```
 
-Then create a Supabase project, run `supabase/migrations/0001_init.sql` in its SQL
-editor, and fill in the env files:
+Then create a Supabase project and run the migrations in `supabase/migrations/`
+in filename order. Run `0002_roles.sql` on its own and let it commit before
+`0003_auth_and_integrity.sql` — Postgres will not let a newly added enum value be
+used in the transaction that added it.
+
+Fill in the env files:
 
 ```bash
 cp backend/.env.example backend/.env
@@ -38,6 +42,23 @@ npm run dev
 API on http://localhost:4000, web on http://localhost:5173 (proxying `/api` to
 the API, so there's no CORS in dev).
 
+## Roles
+
+Six roles, from the PRD. Four are self-service at signup; `coordinator` (the
+PRD's "Emergency Operator") and `admin` are granted by an existing admin through
+`PATCH /api/profile/:id/role`. The clamp is enforced in the signup form, in the
+`handle_new_user()` database trigger, and again by a trigger that rejects any
+role change made with a user's own token.
+
+| Role | Can |
+| ---- | --- |
+| `citizen` | Report emergencies, follow their own reports |
+| `volunteer` | Accept missions, update status from the field |
+| `donor` | List surplus food and supplies with a deadline |
+| `ngo` | Publish shelter capacity and resources |
+| `coordinator` | Triage, approve allocations, run missions |
+| `admin` | Everything, plus role grants |
+
 ## Scripts
 
 | Command             | Does                                        |
@@ -46,6 +67,10 @@ the API, so there's no CORS in dev).
 | `npm run test`      | Backend unit tests (matching engine)        |
 | `npm run typecheck` | Backend `tsc --noEmit` + frontend `tsc -b`  |
 | `npm run build`     | Production build of both                    |
+| `npm run lint`      | Frontend oxlint                             |
+
+CI (`.github/workflows/ci.yml`) runs install → lint → test → typecheck + build on
+every push and pull request.
 
 ## Architecture
 

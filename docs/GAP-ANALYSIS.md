@@ -1,4 +1,9 @@
-# TRIPTI — PRD gap analysis (Phase 0)
+# TRIPTI — PRD gap analysis
+
+> **Phase 1 update (2026-09-08).** Defects D1, D2, D3, D5, D6, D8, D9, D10 and
+> D11 are fixed and verified; D4 now has a writer. Requirement #18 (auth) and
+> #23 (CI) are done. The tables below are the original Phase 0 audit, annotated.
+
 
 Audited: 2026-09-08. Repository state: 46 tracked-able files, **zero commits**,
 both workspaces installed, all checks green.
@@ -61,7 +66,7 @@ Priority: **P0** = demo fails without it · **P1** = demo is weak without it ·
 These are bugs in code that already exists, not missing features. Fix before
 building on top.
 
-### D1 — RLS infinite recursion on `profiles` UPDATE · **P0** · `supabase/migrations/0001_init.sql`
+### ✅ D1 — RLS infinite recursion on `profiles` UPDATE · **P0** · _FIXED in 0003_ · `supabase/migrations/0001_init.sql`
 
 ```sql
 create policy "own profile is updatable" on profiles
@@ -78,7 +83,7 @@ is correct and worth keeping. Fix with a `SECURITY DEFINER` helper that reads th
 role outside RLS, or a `BEFORE UPDATE` trigger that pins `NEW.role = OLD.role`
 unless the caller is an admin. Trigger is the cleaner option.
 
-### D2 — Health endpoint shape and path · **P0** · `backend/src/app.ts`
+### ✅ D2 — Health endpoint shape and path · **P0** · _FIXED_ · `backend/src/app.ts`
 
 PRD §25 requires `GET /health` → `{"status":"ok"}`. The code serves
 `GET /api/health` → `{ ok: true, env: ... }`. Render/Railway probes and the
@@ -86,13 +91,13 @@ acceptance checklist both expect the documented form. Add `/health` with the
 correct shape (keep `/api/health` for the SPA), and stop leaking `NODE_ENV` to
 unauthenticated callers.
 
-### D3 — `updated_at` never updates · **P0** · migration
+### ✅ D3 — `updated_at` never updates · **P0** · _FIXED in 0003_ · migration
 
 `incidents.updated_at` and `missions.updated_at` default to `now()` and are never
 touched again. Any "last changed" display or ordering will be wrong. Add a shared
 `set_updated_at()` trigger function and attach it to both tables.
 
-### D4 — `status_history` is written by nobody · **P0** · backend
+### ✅ D4 — `status_history` is written by nobody · **P0** · _PARTLY FIXED_ · backend
 
 The table, its index, and its RLS policy exist. Not one line of code inserts into
 it. The append-only audit trail that CLAUDE.md calls a hard rule is currently
@@ -100,14 +105,14 @@ empty by construction. Every status transition — incident triage, need
 fulfilment, mission progress — must write a row, ideally in the same transaction
 as the change.
 
-### D5 — Frontend crashes on missing env · **P1** · `frontend/src/lib/supabase.ts`
+### ✅ D5 — Frontend crashes on missing env · **P1** · _FIXED_ · `frontend/src/lib/supabase.ts`
 
 The module throws at import scope, which takes down the entire bundle with a
 blank white page and a console error. For a judge or a new contributor with an
 unconfigured `.env.local`, this reads as "the app is broken". Render a
 configuration-error screen instead of throwing.
 
-### D6 — `PATCH /incidents/:id` skips history and coordinate validation · **P1** · `routes/incidents.ts`
+### ✅ D6 — `PATCH /incidents/:id` skips history and coordinate validation · **P1** · _FIXED_ · `routes/incidents.ts`
 
 Triage writes `triaged_by` but records no history row (see D4), and accepts a
 `lat` without a `lon` (or vice versa), producing a half-located incident that the
@@ -120,17 +125,17 @@ already committed to `proposed`/`accepted` missions. Once mission creation exist
 the same units can be promised twice across two consecutive previews. Needs a
 reservation model, not just a status flag.
 
-### D8 — No rate limiting on AI-backed intake · **P1** · `backend/src/app.ts`
+### ✅ D8 — No rate limiting on AI-backed intake · **P1** · _FIXED_ · `backend/src/app.ts`
 
 `POST /api/incidents` calls the Anthropic API on every request with no throttle.
 Any authenticated account can burn the API budget. Add `express-rate-limit`, with
 a tighter bucket on AI routes.
 
-### D9 — Missing security headers · **P2** · `backend/src/app.ts`
+### ✅ D9 — Missing security headers · **P2** · _FIXED_ · `backend/src/app.ts`
 
 No `helmet`. Add it.
 
-### D10 — Reporter PII readable by every authenticated user · **P1** · migration
+### ✅ D10 — Reporter PII readable by every authenticated user · **P1** · _FIXED in 0003_ · migration
 
 `incidents` RLS is `for select using (auth.uid() is not null)` and the table
 includes `reporter_phone`. Any signed-in account — including a `viewer` — can
@@ -138,7 +143,7 @@ read every reporter's phone number. PRD §18 explicitly says not to expose citiz
 contact details unnecessarily. Restrict the column to coordinator/admin, via a
 view or column-level grants.
 
-### D11 — Cosmetic · **P2**
+### ✅ D11 — Cosmetic · **P2** · _PARTLY FIXED_
 
 `frontend/index.html` still has `<title>frontend</title>`. `frontend/README.md` is
 the stock Vite template.
