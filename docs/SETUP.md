@@ -17,8 +17,21 @@ npm run install:all
 
 ## 2. Run the migrations
 
-Supabase dashboard → **SQL Editor** → *New query*. Paste each file from
-`supabase/migrations/` and run them **in order**:
+```bash
+npm run db:bundle
+```
+
+That writes two files. Supabase dashboard → **SQL Editor** → *New query* →
+paste `supabase/bundle/step-1.sql`, run it, then do the same with `step-2.sql`.
+
+Two blocks rather than one because `0002` adds the enum value `'ngo'`, and
+Postgres refuses to *use* a new enum value until the transaction that added it
+has committed — `0003` and `0004` reference it in policy expressions. Running
+everything at once fails with `unsafe use of new value "ngo" of enum type
+user_role`.
+
+The bundles are generated from `supabase/migrations/`, which stays the source of
+truth. Running each migration separately works too:
 
 | Order | File | What it creates |
 | ----- | ---- | --------------- |

@@ -11,6 +11,9 @@ build/
 .env.*
 !.env.example
 
+# Generated migration bundles — rebuilt from supabase/migrations/ on demand
+supabase/bundle/
+
 # Logs
 *.log
 npm-debug.log*

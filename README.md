@@ -59,6 +59,7 @@ role change made with a user's own token.
 | `npm run build`     | Production build of both                    |
 | `npm run lint`      | Frontend oxlint                             |
 | `npm run health`    | Verify Supabase schema, roles and RLS       |
+| `npm run db:bundle` | Bundle the migrations into two paste-ready blocks |
 
 CI (`.github/workflows/ci.yml`) runs install → lint → test → typecheck + build on
 every push and pull request.
