@@ -19,6 +19,7 @@ import {
   type Severity,
 } from '../../types/api'
 import { useAuth } from '../auth/auth-context'
+import { GeocodeLookup } from './GeocodeLookup'
 import { PriorityBreakdownCard } from './PriorityBreakdownCard'
 
 const STATUSES: IncidentStatus[] = ['open', 'triaged', 'assigned', 'resolved']
@@ -324,6 +325,15 @@ function TriagePanel({
             </option>
           ))}
         </Select>
+
+        {/* Offered, never applied automatically — see GeocodeLookup. */}
+        <GeocodeLookup
+          initialQuery={incident.location_text ?? ''}
+          onPick={(pickedLat, pickedLon) => {
+            setLat(String(pickedLat))
+            setLon(String(pickedLon))
+          }}
+        />
 
         <div className="grid grid-cols-2 gap-2">
           <Input
