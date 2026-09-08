@@ -122,6 +122,36 @@ const anon = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
   auth: { persistSession: false },
 })
 
+// -------------------------------------------------------- connectivity
+
+section('Connection')
+
+/**
+ * A transport failure and a missing table are completely different problems
+ * with completely different fixes, and they are trivially confused: every
+ * schema check below would report `TypeError: fetch failed` as "migration not
+ * applied?", sending someone off to re-run migrations that were already fine.
+ * Establish reachability once, first, and say so plainly.
+ */
+const isNetworkError = (message) =>
+  /fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network|socket hang up/i.test(
+    message ?? '',
+  )
+
+{
+  const { error } = await admin.from('profiles').select('id', { head: true })
+  if (error && isNetworkError(error.message)) {
+    fail(
+      `Cannot reach ${new URL(env.SUPABASE_URL).host}`,
+      `${error.message} — check your connection, and that the project is not paused. Nothing below could be checked.`,
+    )
+    console.log(`
+${RED}1 check failed.${RESET} Could not reach the database.`)
+    process.exit(1)
+  }
+  pass(`Reachable at ${new URL(env.SUPABASE_URL).host}`)
+}
+
 // -------------------------------------------------------------- schema
 
 section('Schema — every migration applied')
@@ -155,8 +185,16 @@ const TABLES = {
 for (const [migration, tables] of Object.entries(TABLES)) {
   for (const table of tables) {
     const error = await tableError(table)
-    if (error) fail(`table ${table}`, `${error} — migration ${migration} not applied?`)
-    else pass(`table ${table}`, `(${migration})`)
+    if (error) {
+      fail(
+        `table ${table}`,
+        isNetworkError(error)
+          ? `${error} — a connection problem, not a schema one.`
+          : `${error} — migration ${migration} not applied?`,
+      )
+    } else {
+      pass(`table ${table}`, `(${migration})`)
+    }
   }
 }
 
@@ -171,8 +209,16 @@ const COLUMNS = [
 
 for (const [table, column, migration] of COLUMNS) {
   const error = await columnError(table, column)
-  if (error) fail(`${table}.${column}`, `migration ${migration} not applied`)
-  else pass(`${table}.${column}`, `(${migration})`)
+  if (error) {
+    fail(
+      `${table}.${column}`,
+      isNetworkError(error)
+        ? `${error} — a connection problem, not a schema one.`
+        : `migration ${migration} not applied`,
+    )
+  } else {
+    pass(`${table}.${column}`, `(${migration})`)
+  }
 }
 
 // reporter_phone must be *gone* — it moved to incident_contacts in 0003. Here an
