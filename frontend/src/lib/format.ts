@@ -29,6 +29,12 @@ export function timeUntil(iso: string | null, now: number = Date.now()): string 
   return `${Math.round(hours / 24)}d left`
 }
 
+/** Minutes until a deadline, negative once past it. Null when there is none. */
+export function minutesUntil(iso: string | null, now: number = Date.now()): number | null {
+  if (!iso) return null
+  return Math.round((new Date(iso).getTime() - now) / 60_000)
+}
+
 export function formatCoords(lat: number | null, lon: number | null): string | null {
   if (lat == null || lon == null) return null
   return `${lat.toFixed(4)}, ${lon.toFixed(4)}`

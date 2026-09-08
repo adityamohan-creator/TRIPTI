@@ -4,7 +4,10 @@ import helmet from 'helmet'
 import { config } from './config.js'
 import { AppError } from './lib/errors.js'
 import { generalLimiter } from './middleware/rateLimit.js'
+import { fleetRouter } from './routes/fleet.js'
+import { geoRouter } from './routes/geo.js'
 import { incidentsRouter } from './routes/incidents.js'
+import { missionsRouter } from './routes/missions.js'
 import { matchRouter } from './routes/match.js'
 import { needsRouter } from './routes/needs.js'
 import { plansRouter } from './routes/plans.js'
@@ -47,6 +50,9 @@ export function createApp() {
   app.use('/api/needs', needsRouter)
   app.use('/api/resources', resourcesRouter)
   app.use('/api/plans', plansRouter)
+  app.use('/api/missions', missionsRouter)
+  app.use('/api/geocode', geoRouter)
+  app.use('/api', fleetRouter)
   app.use('/api/match', matchRouter)
 
   app.use((_req, res) => {

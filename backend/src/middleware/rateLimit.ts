@@ -23,3 +23,16 @@ export const aiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many reports submitted. Wait a moment and try again.' },
 })
+
+/**
+ * Geocoding calls a free public service whose usage policy allows roughly one
+ * request a second. Being a bad citizen there gets the whole project blocked,
+ * so the limit is ours to keep, not theirs to enforce.
+ */
+export const geoLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many place lookups. Wait a moment and try again.' },
+})

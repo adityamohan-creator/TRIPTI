@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ProfilePage } from '../features/auth/ProfilePage'
@@ -14,6 +15,17 @@ import { Incidents } from '../pages/Incidents'
 import { Landing } from '../pages/Landing'
 import { Missions } from '../pages/Missions'
 import { NotFound } from '../pages/NotFound'
+import { Skeleton } from '../components/ui/Skeleton'
+
+/*
+ * Leaflet and its stylesheet are about 160 kB, and only the map screen needs
+ * them. Loaded eagerly they were downloaded by every user on every route,
+ * including the sign-in page — so the map pays for itself only when someone
+ * opens it.
+ */
+const MapPage = lazy(() =>
+  import('../pages/MapPage').then((m) => ({ default: m.MapPage })),
+)
 
 /**
  * Public routes, then the authenticated shell. Role gating happens per route
@@ -39,6 +51,14 @@ export function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route
+          path="map"
+          element={
+            <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
+              <MapPage />
+            </Suspense>
+          }
+        />
         <Route path="incidents" element={<Incidents />} />
         <Route path="incidents/new" element={<ReportPage />} />
         <Route path="incidents/:id" element={<IncidentDetailPage />} />

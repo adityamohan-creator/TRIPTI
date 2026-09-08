@@ -17,6 +17,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '/app', label: 'Overview', end: true },
+  { to: '/app/map', label: 'Map' },
   { to: '/app/incidents', label: 'Incidents' },
   { to: '/app/resources', label: 'Resources' },
   { to: '/app/planning', label: 'Planning', roles: ['coordinator', 'admin'] },
