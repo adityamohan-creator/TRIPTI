@@ -23,15 +23,23 @@ export default defineConfig(({ command, mode }) => {
    * nothing is being shipped.
    */
   if (command === 'build') {
-    const missing = REQUIRED_BUILD_ENV.filter((key) => !env[key])
+    // A placeholder counts as missing. Copying .env.example and forgetting to
+    // edit it otherwise produces a bundle pinned to a hostname that does not
+    // resolve — which fails at runtime for every user, not at build time.
+    const placeholder = /your-project|your-anon-key|placeholder|paste_/i
+    const missing = REQUIRED_BUILD_ENV.filter(
+      (key) => !env[key] || placeholder.test(env[key]),
+    )
     if (missing.length > 0) {
       throw new Error(
-        `Cannot build the frontend without ${missing.join(' and ')}.\n` +
+        `Cannot build the frontend: ${missing.join(' and ')} unset, or still ` +
+          'holding the placeholder from .env.example.\n' +
           'These are inlined into the bundle at build time, so a build without ' +
-          'them produces an app that can only ever show the setup screen.\n' +
-          'Copy .env.example to .env.local, or set them in your CI/hosting ' +
-          'environment. Both are public values — the service role key does not ' +
-          'belong here.',
+          'real values produces an app that can only ever show the setup screen ' +
+          'or fail against a hostname that does not resolve.\n' +
+          'Fill in .env.local with your project values, or set them in your ' +
+          'CI/hosting environment. Both are public — the service role key does ' +
+          'not belong here.',
       )
     }
   }

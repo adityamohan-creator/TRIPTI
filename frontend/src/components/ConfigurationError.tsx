@@ -14,16 +14,21 @@ export function ConfigurationError() {
           TRIPTI is not configured yet
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-2">
-          The browser has no Supabase credentials, so sign-in cannot work. Create{' '}
+          The browser has no usable Supabase credentials, so sign-in cannot work.
+          Either{' '}
           <code className="rounded bg-sunken px-1 py-0.5 font-mono text-xs">
             frontend/.env.local
           </code>{' '}
-          from the example file and fill in both values:
+          does not exist, or it still holds the placeholders copied from{' '}
+          <code className="rounded bg-sunken px-1 py-0.5 font-mono text-xs">
+            .env.example
+          </code>
+          . Replace both with your real project values:
         </p>
 
         <pre className="mt-4 overflow-x-auto rounded-control border border-line bg-sunken p-4 font-mono text-xs text-ink-2">
-{`VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key`}
+{`VITE_SUPABASE_URL=https://<your-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<publishable key>`}
         </pre>
 
         <p className="mt-4 text-sm text-ink-2">

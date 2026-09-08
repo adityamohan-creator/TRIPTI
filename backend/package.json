@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "health": "node scripts/health-check.mjs"
+    "health": "node scripts/health-check.mjs",
+    "set-role": "node scripts/set-role.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
