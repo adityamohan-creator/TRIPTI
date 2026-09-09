@@ -400,3 +400,44 @@ export interface MissionActions {
   status: MissionStatus
   actions: MissionAction[]
 }
+
+// -------------------------------------------------------- reallocation
+
+export interface ReallocationMove {
+  resourceId: string
+  quantity: number | null
+  fromNeedId: string
+  fromPriority: number
+  toNeedId: string
+  toPriority: number
+  priorityGain: number
+  matchId: string
+  distanceKm: number
+  score: number
+  rationale: string
+}
+
+export interface ReallocationPreview {
+  moves: ReallocationMove[]
+  /** What was deliberately not moved. Shown with equal weight to the moves. */
+  protectedCommitments: { matchId: string; needId: string; reason: string }[]
+  stillUnserved: { needId: string; reason: string }[]
+  minPriorityGain: number
+  needsMissingCoordinates: string[]
+}
+
+export interface Reallocation {
+  id: string
+  label: string | null
+  status: 'proposed' | 'approved' | 'discarded'
+  moves: ReallocationMove[]
+  protected_commitments: { matchId: string; needId: string; reason: string }[]
+  still_unserved: { needId: string; reason: string }[]
+  min_priority_gain: number | null
+  triggered_by_incident: string | null
+  created_by: string | null
+  approved_by: string | null
+  approved_at: string | null
+  note: string | null
+  created_at: string
+}

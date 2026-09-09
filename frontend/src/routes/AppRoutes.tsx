@@ -10,6 +10,7 @@ import { VehiclesPage } from '../features/fleet/VehiclesPage'
 import { VolunteerPage } from '../features/fleet/VolunteerPage'
 import { MissionsPage } from '../features/missions/MissionsPage'
 import { PlanningPage } from '../features/plans/PlanningPage'
+import { ReallocationPage } from '../features/reallocation/ReallocationPage'
 import { ResourcesPage } from '../features/resources/ResourcesPage'
 import { AppShell } from '../layouts/AppShell'
 import { AuthLayout } from '../layouts/AuthLayout'
@@ -65,6 +66,14 @@ export function AppRoutes() {
         <Route path="incidents/new" element={<ReportPage />} />
         <Route path="incidents/:id" element={<IncidentDetailPage />} />
         <Route path="resources" element={<ResourcesPage />} />
+        <Route
+          path="reallocation"
+          element={
+            <RoleRoute allow={['coordinator', 'admin']}>
+              <ReallocationPage />
+            </RoleRoute>
+          }
+        />
         <Route
           path="planning"
           element={

@@ -11,6 +11,7 @@ import { missionsRouter } from './routes/missions.js'
 import { matchRouter } from './routes/match.js'
 import { needsRouter } from './routes/needs.js'
 import { plansRouter } from './routes/plans.js'
+import { reallocationRouter } from './routes/reallocation.js'
 import { profileRouter } from './routes/profile.js'
 import { resourcesRouter } from './routes/resources.js'
 
@@ -50,6 +51,7 @@ export function createApp() {
   app.use('/api/needs', needsRouter)
   app.use('/api/resources', resourcesRouter)
   app.use('/api/plans', plansRouter)
+  app.use('/api/reallocation', reallocationRouter)
   app.use('/api/missions', missionsRouter)
   app.use('/api/geocode', geoRouter)
   app.use('/api', fleetRouter)
