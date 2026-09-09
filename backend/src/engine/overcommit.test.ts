@@ -54,6 +54,22 @@ describe('over-commitment through the unmetered path', () => {
     expect(unmatched).toHaveLength(1)
   })
 
+  it('does not let an unknown demand starve a known one', () => {
+    // The overcorrection: treating "amount unknown" as "takes everything"
+    // meant a 600-litre need was told no water was available while 12,000
+    // litres sat in the depot. One unmetered claim per resource is enough to
+    // stop two volunteers collecting one load; it must not block a measured
+    // need the same stock can plainly cover.
+    const { matches, unmatched } = matchNeeds(
+      [need('unknown', null), need('measured', 600)],
+      [resource('depot', 12_000)],
+      { now: NOW },
+    )
+
+    expect(matches.map((m) => m.needId).sort()).toEqual(['measured', 'unknown'])
+    expect(unmatched).toEqual([])
+  })
+
   it('still serves the second need when a second resource exists', () => {
     const { matches } = matchNeeds(
       [need('a', null), need('b', null)],

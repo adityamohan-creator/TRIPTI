@@ -51,7 +51,7 @@ export interface PoolSnapshot {
 }
 
 export async function loadPool(now: number = Date.now()): Promise<PoolSnapshot> {
-  const [needsResult, resourcesResult, vehiclesResult] = await Promise.all([
+  const [needsResult, resourcesResult, vehiclesResult, liveMatches] = await Promise.all([
     admin
       .from('needs')
       .select(
@@ -65,11 +65,37 @@ export async function loadPool(now: number = Date.now()): Promise<PoolSnapshot> 
     admin
       .from('vehicles')
       .select('id, capacity_units, refrigerated, availability'),
+    /*
+     * What is already promised.
+     *
+     * A need stays 'unmet' until something is actually delivered, so without
+     * this the matcher happily plans it again — proposing a second collection
+     * for work already under way. The database catches the duplicate pairing
+     * with a unique index and the request fails as a 500, which is the right
+     * refusal arriving in the worst possible form.
+     */
+    admin
+      .from('matches')
+      .select('need_id, resource_id, allocated_quantity')
+      .in('status', ['proposed', 'reserved', 'committed']),
   ])
 
   if (needsResult.error) throw needsResult.error
   if (resourcesResult.error) throw resourcesResult.error
   if (vehiclesResult.error) throw vehiclesResult.error
+  if (liveMatches.error) throw liveMatches.error
+
+  const committedByNeed = new Map<string, number>()
+  const claimedPairs = new Set<string>()
+
+  for (const row of liveMatches.data ?? []) {
+    const needId = row.need_id as string
+    committedByNeed.set(
+      needId,
+      (committedByNeed.get(needId) ?? 0) + Number(row.allocated_quantity ?? 0),
+    )
+    claimedPairs.add(`${needId}:${row.resource_id}`)
+  }
 
   const needs: Need[] = []
   const needsMissingCoordinates: string[] = []
@@ -84,12 +110,29 @@ export async function loadPool(now: number = Date.now()): Promise<PoolSnapshot> 
       continue
     }
 
+    const alreadyCommitted = committedByNeed.get(row.id) ?? 0
+    const hasLiveMatch = claimedPairs.size > 0 && [...claimedPairs].some((p) => p.startsWith(`${row.id}:`))
+
+    // An unmetered need with anything already in flight is covered as far as
+    // this planner can tell — there is no figure to compare against, so
+    // planning it again would only duplicate the run.
+    if (row.quantity == null && hasLiveMatch) continue
+
+    const outstanding = row.quantity == null ? null : Number(row.quantity) - alreadyCommitted
+    if (outstanding !== null && outstanding <= 0) continue
+
     needs.push({
-      ...toPriorityInput(incident, { kind: row.kind, status: row.status, quantity: row.quantity }, now),
+      ...toPriorityInput(
+        incident,
+        { kind: row.kind, status: row.status, quantity: row.quantity, fulfilled: alreadyCommitted },
+        now,
+      ),
       id: row.id,
       incidentId: row.incident_id,
       kind: row.kind,
-      quantity: row.quantity,
+      // Only what is still outstanding goes to the matcher, so a partly served
+      // need asks for the remainder rather than the whole thing again.
+      quantity: outstanding,
       at: { lat: incident.lat, lon: incident.lon },
       lifeCritical: LIFE_CRITICAL_KINDS.has(row.kind),
     })

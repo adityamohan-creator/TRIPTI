@@ -286,6 +286,21 @@ export function matchNeeds(
     ]),
   )
 
+  /*
+   * Resources already claimed by a need that did not state an amount.
+   *
+   * Tracked separately from `remaining` because the two failures pull in
+   * opposite directions. Consuming nothing lets one kitchen's meals be promised
+   * to every food need on the board — two volunteers, one load. Consuming
+   * everything lets "water, amount unknown" swallow a 12,000-litre depot and
+   * leave a measured 600-litre need told there is no water.
+   *
+   * One unmetered claim per resource settles both: the duplicate collection is
+   * impossible, and measured demand still draws on the quantity that is
+   * demonstrably there.
+   */
+  const unmeteredClaims = new Set<string>()
+
   const ranked = [...needs].sort(
     (a, b) => priorityBreakdown(b).score - priorityBreakdown(a).score,
   )
@@ -304,6 +319,9 @@ export function matchNeeds(
       const candidates = resources
         .filter((r) => r.kind === need.kind)
         .filter((r) => {
+          // A need with no stated amount may only take a resource nothing else
+          // has claimed the same way.
+          if (outstanding === null && unmeteredClaims.has(r.id)) return false
           const left = remaining.get(r.id)
           return left === null || (left ?? 0) > 0
         })
@@ -362,19 +380,13 @@ export function matchNeeds(
       const left = remaining.get(best.r.id) ?? null
       if (left === null || outstanding === null) {
         /*
-         * Either side unmetered, so the resource is taken whole.
-         *
-         * Marking it consumed is the point. An unknown quantity that consumed
-         * nothing left the resource fully available to the next need of the
-         * same kind — so one kitchen's 400 meals could be promised to every
-         * food need on the board, and one rescue team dispatched to two places
-         * at once. Unmetered means "we do not know how much", not "unlimited",
-         * and the safe reading of an unknown demand is that it takes the lot.
-         *
-         * A coordinator who knows better can split it; nobody can un-send two
-         * volunteers to collect one load.
+         * Either side unmetered. The claim is recorded so no other unknown
+         * demand is sent to the same place, and an unmetered *resource* — one
+         * rescue team, one doctor — is exhausted outright, because it can only
+         * be in one place at a time.
          */
-        remaining.set(best.r.id, 0)
+        unmeteredClaims.add(best.r.id)
+        if (left === null) remaining.set(best.r.id, 0)
         outstanding = 0
         break
       }
