@@ -361,7 +361,20 @@ export function matchNeeds(
 
       const left = remaining.get(best.r.id) ?? null
       if (left === null || outstanding === null) {
-        // Either side unmetered: assign it whole and move on.
+        /*
+         * Either side unmetered, so the resource is taken whole.
+         *
+         * Marking it consumed is the point. An unknown quantity that consumed
+         * nothing left the resource fully available to the next need of the
+         * same kind — so one kitchen's 400 meals could be promised to every
+         * food need on the board, and one rescue team dispatched to two places
+         * at once. Unmetered means "we do not know how much", not "unlimited",
+         * and the safe reading of an unknown demand is that it takes the lot.
+         *
+         * A coordinator who knows better can split it; nobody can un-send two
+         * volunteers to collect one load.
+         */
+        remaining.set(best.r.id, 0)
         outstanding = 0
         break
       }

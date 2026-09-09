@@ -73,6 +73,53 @@ async function missionGeography(mission: MissionRow): Promise<{
   }
 }
 
+/**
+ * Which missions this person is entitled to see.
+ *
+ * Null means "everything" — only for roles running the response. Everyone else
+ * is scoped by their relationship to the work: a volunteer sees what they were
+ * given, a citizen sees the missions serving the incident they reported, a
+ * donor sees the collections from their own stock. That is enough for each of
+ * them to follow what is happening without handing a stranger the whole
+ * dispatch board, including which volunteer is driving where.
+ */
+async function visibleMissionScope(
+  user: AuthUser,
+): Promise<{ column: 'id' | 'assigned_to' | 'need_id' | 'resource_id'; values: string[] } | null> {
+  if (['ngo', 'coordinator', 'admin'].includes(user.role)) return null
+
+  if (user.role === 'volunteer') {
+    return { column: 'assigned_to', values: [user.id] }
+  }
+
+  if (user.role === 'donor') {
+    const { data, error } = await admin
+      .from('resources')
+      .select('id')
+      .eq('owner_id', user.id)
+    if (error) throw error
+    return { column: 'resource_id', values: (data ?? []).map((r) => r.id) }
+  }
+
+  // Citizen: the missions serving incidents they reported.
+  const { data: incidents, error: incidentError } = await admin
+    .from('incidents')
+    .select('id')
+    .eq('reported_by', user.id)
+  if (incidentError) throw incidentError
+
+  const incidentIds = (incidents ?? []).map((i) => i.id)
+  if (incidentIds.length === 0) return { column: 'need_id', values: [] }
+
+  const { data: needs, error: needError } = await admin
+    .from('needs')
+    .select('id')
+    .in('incident_id', incidentIds)
+  if (needError) throw needError
+
+  return { column: 'need_id', values: (needs ?? []).map((n) => n.id) }
+}
+
 export async function listMissions(user: AuthUser, status?: string) {
   let query = admin
     .from('missions')
@@ -84,8 +131,14 @@ export async function listMissions(user: AuthUser, status?: string) {
     .limit(100)
 
   if (status) query = query.eq('status', status)
-  // A volunteer sees their own work, not the whole board.
-  if (user.role === 'volunteer') query = query.eq('assigned_to', user.id)
+
+  const scope = await visibleMissionScope(user)
+  if (scope) {
+    // An empty scope means nothing of theirs is in flight. Filtering on an
+    // empty `in` list would match every row, so return early instead.
+    if (scope.values.length === 0) return { missions: [] }
+    query = query.in(scope.column, scope.values)
+  }
 
   const { data, error } = await query
   if (error) throw error
@@ -106,8 +159,20 @@ export async function getMission(user: AuthUser, id: string) {
   if (!data) throw notFound('No such mission')
 
   const row = data as unknown as MissionRow
-  if (user.role === 'volunteer' && row.assigned_to !== user.id) {
-    throw notFound('No such mission')
+  const scope = await visibleMissionScope(user)
+
+  if (scope) {
+    const value =
+      scope.column === 'assigned_to'
+        ? row.assigned_to
+        : scope.column === 'need_id'
+          ? row.need_id
+          : scope.column === 'resource_id'
+            ? row.resource_id
+            : row.id
+
+    // 404 rather than 403: whether a mission exists is itself operational.
+    if (value == null || !scope.values.includes(value)) throw notFound('No such mission')
   }
 
   return { mission: data }

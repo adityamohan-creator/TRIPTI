@@ -123,7 +123,7 @@ export async function createPlan(user: AuthUser, input: CreatePlanInput) {
   }
 
   await recordStatusChange({
-    entityType: 'mission',
+    entityType: 'plan',
     entityId: plan.id,
     fromStatus: null,
     toStatus: 'proposed',
@@ -227,6 +227,15 @@ export async function approvePlan(user: AuthUser, id: string, note?: string | nu
     .eq('id', id)
   if (planError) throw planError
 
+  await recordStatusChange({
+    entityType: 'plan',
+    entityId: id,
+    fromStatus: 'proposed',
+    toStatus: 'approved',
+    changedBy: user.id,
+    note: `Approved; ${missions?.length ?? 0} mission(s) created.`,
+  })
+
   for (const mission of missions ?? []) {
     await recordStatusChange({
       entityType: 'mission',
@@ -283,7 +292,7 @@ export async function discardPlan(user: AuthUser, id: string, note?: string | nu
   if (planError) throw planError
 
   await recordStatusChange({
-    entityType: 'mission',
+    entityType: 'plan',
     entityId: id,
     fromStatus: plan.status,
     toStatus: 'discarded',

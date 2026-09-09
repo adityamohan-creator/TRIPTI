@@ -48,6 +48,11 @@ const STEPS = [
     includes: ['0006_response_plans.sql'],
     note: 'Response plans and reservations. Safe to run on its own if steps 1 and 2 are already applied.',
   },
+  {
+    file: 'step-4.sql',
+    includes: ['0007_audit_entity_plan.sql'],
+    note: 'Lets the audit trail name a response plan, and repairs rows written before it could.',
+  },
 ]
 
 const available = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql'))

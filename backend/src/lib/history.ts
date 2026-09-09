@@ -1,6 +1,6 @@
 import { admin } from '../supabase.js'
 
-export type HistoryEntity = 'incident' | 'need' | 'resource' | 'mission'
+export type HistoryEntity = 'incident' | 'need' | 'resource' | 'mission' | 'plan'
 
 export interface StatusChange {
   entityType: HistoryEntity
