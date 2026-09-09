@@ -22,6 +22,8 @@ const NAV: NavItem[] = [
   { to: '/app/resources', label: 'Resources' },
   { to: '/app/planning', label: 'Planning', roles: ['coordinator', 'admin'] },
   { to: '/app/missions', label: 'Missions' },
+  { to: '/app/vehicles', label: 'Vehicles' },
+  { to: '/app/availability', label: 'Availability' },
 ]
 
 function initials(name: string | null, email: string | undefined): string {

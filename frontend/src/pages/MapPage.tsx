@@ -1,11 +1,18 @@
 import { Alert } from '../components/ui/Alert'
 import { Skeleton } from '../components/ui/Skeleton'
 import { ErrorState } from '../components/ui/States'
-import { CrisisMap, MapLegend, type MapIncident, type MapResource } from '../features/map/CrisisMap'
+import {
+  CrisisMap,
+  MapLegend,
+  type MapIncident,
+  type MapResource,
+  type MapRoute,
+  type MapVehicle,
+} from '../features/map/CrisisMap'
 import { useAsync } from '../hooks/useAsync'
 import { get } from '../lib/api'
 import { minutesUntil } from '../lib/format'
-import type { Incident, Resource } from '../types/api'
+import type { Incident, Mission, Resource, Vehicle } from '../types/api'
 
 /** Anything due within this window is worth flagging on the map. */
 const EXPIRING_SOON_MINUTES = 12 * 60
@@ -13,9 +20,12 @@ const EXPIRING_SOON_MINUTES = 12 * 60
 export function MapPage() {
   const incidents = useAsync(() => get<{ incidents: Incident[] }>('/incidents'), [])
   const resources = useAsync(() => get<{ resources: Resource[] }>('/resources?usable=true'), [])
+  const missions = useAsync(() => get<{ missions: Mission[] }>('/missions'), [])
+  const vehicles = useAsync(() => get<{ vehicles: Vehicle[] }>('/vehicles'), [])
 
-  const loading = incidents.loading || resources.loading
-  const error = incidents.error ?? resources.error
+  const loading =
+    incidents.loading || resources.loading || missions.loading || vehicles.loading
+  const error = incidents.error ?? resources.error ?? missions.error ?? vehicles.error
 
   const located: MapIncident[] = (incidents.data?.incidents ?? [])
     .filter((i) => i.lat != null && i.lon != null && i.status !== 'resolved')
@@ -45,6 +55,39 @@ export function MapPage() {
       }
     })
 
+  const fleet: MapVehicle[] = (vehicles.data?.vehicles ?? [])
+    .filter((v) => v.lat != null && v.lon != null)
+    .map((v) => ({
+      id: v.id,
+      lat: v.lat!,
+      lon: v.lon!,
+      label: v.label,
+      refrigerated: v.refrigerated,
+      available: v.availability === 'available',
+    }))
+
+  // Only missions that were actually routed have a line to draw. A mission
+  // without geometry is one the routing service could not solve — the dashed
+  // fallback still shows the direct line so the run is visible either way.
+  const routes: MapRoute[] = (missions.data?.missions ?? [])
+    .filter((m) => m.route != null && m.status !== 'cancelled' && m.status !== 'failed')
+    .map((m) => {
+      const geometry = m.route!.geometry
+      const points: [number, number][] = geometry
+        ? geometry.coordinates.map(([lon, lat]) => [lat, lon] as [number, number])
+        : ([
+            m.resources?.lat != null && m.resources.lon != null
+              ? [m.resources.lat, m.resources.lon]
+              : null,
+            m.needs?.incidents?.lat != null && m.needs.incidents.lon != null
+              ? [m.needs.incidents.lat, m.needs.incidents.lon]
+              : null,
+          ].filter(Boolean) as [number, number][])
+
+      return { id: m.id, points, estimated: m.route!.estimated || !geometry }
+    })
+    .filter((r) => r.points.length >= 2)
+
   const unlocatedIncidents = (incidents.data?.incidents ?? []).filter(
     (i) => i.lat == null && i.status !== 'resolved',
   ).length
@@ -69,6 +112,8 @@ export function MapPage() {
           onRetry={() => {
             incidents.reload()
             resources.reload()
+            missions.reload()
+            vehicles.reload()
           }}
         />
       )}
@@ -77,12 +122,14 @@ export function MapPage() {
 
       {!loading && !error && (
         <>
-          <CrisisMap incidents={located} resources={supply} />
+          <CrisisMap incidents={located} resources={supply} vehicles={fleet} routes={routes} />
           <MapLegend />
 
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-2">
             <span>{located.length} incident(s) plotted</span>
             <span>{supply.length} resource(s) plotted</span>
+            <span>{fleet.length} vehicle(s) plotted</span>
+            <span>{routes.length} route(s) drawn</span>
           </div>
 
           {(unlocatedIncidents > 0 || unlocatedResources > 0) && (

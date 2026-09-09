@@ -78,6 +78,23 @@ export const nominatimProvider: GeocodingProvider = {
   },
 }
 
+/**
+ * A coordinate that is actually on Earth.
+ *
+ * Checked here rather than only in the Nominatim adapter: the whole point of
+ * the provider interface is that another implementation can be dropped in, and
+ * a guard that lives in one adapter protects only that adapter. A latitude of
+ * 999 puts a marker nowhere, and a truck nowhere with it.
+ */
+function isPlausible(candidate: GeocodeCandidate): boolean {
+  return (
+    Number.isFinite(candidate.lat) &&
+    Number.isFinite(candidate.lon) &&
+    Math.abs(candidate.lat) <= 90 &&
+    Math.abs(candidate.lon) <= 180
+  )
+}
+
 export interface GeocodeResult {
   candidates: GeocodeCandidate[]
   provider: string
@@ -104,7 +121,8 @@ export async function geocode(
   }
 
   try {
-    return { candidates: await provider.search(trimmed, limit), provider: provider.name }
+    const found = await provider.search(trimmed, limit)
+    return { candidates: found.filter(isPlausible), provider: provider.name }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Lookup failed'
     console.error('Geocoding failed:', message)

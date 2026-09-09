@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { get } from '../../lib/api'
+import { ApiError, get } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import type { Profile } from '../../types/api'
 import { AuthContext, type SignUpInput } from './auth-context'
@@ -23,6 +23,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfileError(null)
     } catch (err) {
       if (currentUserId.current !== userId) return
+
+      /*
+       * A rejected token is not a degraded state to sit in.
+       *
+       * The stored session can outlive the account it names — an expired
+       * token, a revoked session, a user deleted from the dashboard. Leaving
+       * the shell mounted then strands someone on a signed-in-looking app
+       * where every request fails, with no way out but clearing site data.
+       * Sign out and let the router send them to the login screen.
+       */
+      if (err instanceof ApiError && err.status === 401) {
+        void supabase.auth.signOut()
+        return
+      }
+
       setProfile(null)
       setProfileError(
         err instanceof Error ? err.message : 'Could not load your profile.',

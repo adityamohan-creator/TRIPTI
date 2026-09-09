@@ -270,3 +270,118 @@ export interface PlanDetail {
   plan: ResponsePlan
   matches: PlanMatch[]
 }
+
+// ---------------------------------------------------------------- fleet
+
+export type Availability = 'available' | 'busy' | 'offline'
+export const AVAILABILITY: Availability[] = ['available', 'busy', 'offline']
+
+export const VEHICLE_TYPES = ['bike', 'car', 'van', 'truck', 'boat', 'other'] as const
+export type VehicleType = (typeof VEHICLE_TYPES)[number]
+
+/** Skills the assigner can require. Free text is allowed; these are the common ones. */
+export const COMMON_SKILLS = [
+  'driving',
+  'first-aid',
+  'swimming',
+  'lifting',
+  'local-knowledge',
+  'translation',
+  'medical',
+] as const
+
+export interface Volunteer {
+  user_id: string
+  skills: string[]
+  vehicle_id: string | null
+  availability: Availability
+  lat: number | null
+  lon: number | null
+  max_concurrent_missions: number
+  notes: string | null
+  updated_at: string
+  profiles?: { full_name: string | null; phone: string | null; role: Role } | null
+}
+
+export interface Vehicle {
+  id: string
+  owner_id: string | null
+  label: string
+  type: VehicleType
+  capacity_kg: number | null
+  capacity_units: number | null
+  refrigerated: boolean
+  availability: Availability
+  lat: number | null
+  lon: number | null
+  updated_at: string
+}
+
+// -------------------------------------------------------------- missions
+
+export interface Mission {
+  id: string
+  plan_id: string | null
+  need_id: string
+  resource_id: string
+  assigned_to: string | null
+  vehicle_id: string | null
+  quantity: number | null
+  distance_km: number | null
+  need_priority: number | null
+  status: MissionStatus
+  route: {
+    distanceKm: number
+    durationMin: number
+    estimated: boolean
+    provider: string
+    geometry: { type: 'LineString'; coordinates: [number, number][] } | null
+  } | null
+  created_at: string
+  needs?: {
+    kind: string
+    unit: string | null
+    incidents?: {
+      summary: string | null
+      severity: Severity
+      location_text: string | null
+      lat: number | null
+      lon: number | null
+    } | null
+  } | null
+  resources?: {
+    label: string
+    kind: string
+    unit: string | null
+    address: string | null
+    lat: number | null
+    lon: number | null
+    expiry_time: string | null
+    perishable: boolean
+  } | null
+}
+
+export interface AssignmentTerm {
+  key: string
+  label: string
+  normalised: number
+  weight: number
+  points: number
+  detail: string
+}
+
+export interface AssignmentCandidate {
+  volunteerId: string
+  volunteerName: string | null
+  vehicleId: string | null
+  vehicleLabel: string | null
+  distanceToPickupKm: number | null
+  estimatedMinutes: number | null
+  score: number
+  terms: AssignmentTerm[]
+}
+
+export interface CandidateResponse {
+  candidates: AssignmentCandidate[]
+  excluded: { volunteerId: string; name: string | null; reason: string }[]
+}

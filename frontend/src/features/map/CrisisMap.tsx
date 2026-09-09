@@ -33,6 +33,15 @@ export interface MapResource {
   expiring: boolean
 }
 
+export interface MapVehicle {
+  id: string
+  lat: number
+  lon: number
+  label: string
+  refrigerated: boolean
+  available: boolean
+}
+
 export interface MapRoute {
   id: string
   /** [lat, lon] pairs. */
@@ -70,17 +79,26 @@ function FitToContent({ points }: { points: [number, number][] }) {
 export function CrisisMap({
   incidents,
   resources,
+  vehicles = [],
   routes = [],
   height = '28rem',
 }: {
   incidents: MapIncident[]
   resources: MapResource[]
+  /**
+   * Vehicles, not volunteers. A vehicle's position is operational; a
+   * volunteer's is where a person is standing, and plotting that for every
+   * coordinator to see is a privacy decision nobody asked for. The assigner
+   * already uses volunteer distance without exposing the location itself.
+   */
+  vehicles?: MapVehicle[]
   routes?: MapRoute[]
   height?: string
 }) {
   const points: [number, number][] = [
     ...incidents.map((i) => [i.lat, i.lon] as [number, number]),
     ...resources.map((r) => [r.lat, r.lon] as [number, number]),
+    ...vehicles.map((v) => [v.lat, v.lon] as [number, number]),
   ]
 
   return (
@@ -141,6 +159,27 @@ export function CrisisMap({
               <br />
               <span style={{ textTransform: 'capitalize' }}>{resource.kind}</span>
               {resource.expiring && <> · expiring soon</>}
+            </Popup>
+          </CircleMarker>
+        ))}
+
+        {vehicles.map((vehicle) => (
+          <CircleMarker
+            key={vehicle.id}
+            center={[vehicle.lat, vehicle.lon]}
+            radius={5}
+            pathOptions={{
+              color: 'var(--color-ink-2)',
+              fillColor: vehicle.available ? 'var(--color-ink-2)' : 'transparent',
+              fillOpacity: 1,
+              weight: 2,
+            }}
+          >
+            <Popup>
+              <strong>{vehicle.label}</strong>
+              <br />
+              {vehicle.available ? 'Available' : 'Not available'}
+              {vehicle.refrigerated && <> · refrigerated</>}
             </Popup>
           </CircleMarker>
         ))}
@@ -208,6 +247,13 @@ export function MapLegend() {
           style={{ borderColor: 'var(--color-brand-700)', background: 'var(--color-warning)' }}
         />
         Expiring soon
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="size-2 rounded-full border-2"
+          style={{ borderColor: 'var(--color-ink-2)', background: 'var(--color-ink-2)' }}
+        />
+        Vehicle
       </span>
       <span className="flex items-center gap-1.5">
         <span className="h-0.5 w-6" style={{ background: 'var(--color-brand-600)' }} />

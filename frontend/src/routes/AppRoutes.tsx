@@ -6,6 +6,9 @@ import { ProtectedRoute, RoleRoute } from '../features/auth/ProtectedRoute'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { IncidentDetailPage } from '../features/incidents/IncidentDetailPage'
 import { ReportPage } from '../features/incidents/ReportPage'
+import { VehiclesPage } from '../features/fleet/VehiclesPage'
+import { VolunteerPage } from '../features/fleet/VolunteerPage'
+import { MissionsPage } from '../features/missions/MissionsPage'
 import { PlanningPage } from '../features/plans/PlanningPage'
 import { ResourcesPage } from '../features/resources/ResourcesPage'
 import { AppShell } from '../layouts/AppShell'
@@ -13,7 +16,6 @@ import { AuthLayout } from '../layouts/AuthLayout'
 import { Dashboard } from '../pages/Dashboard'
 import { Incidents } from '../pages/Incidents'
 import { Landing } from '../pages/Landing'
-import { Missions } from '../pages/Missions'
 import { NotFound } from '../pages/NotFound'
 import { Skeleton } from '../components/ui/Skeleton'
 
@@ -71,7 +73,9 @@ export function AppRoutes() {
             </RoleRoute>
           }
         />
-        <Route path="missions" element={<Missions />} />
+        <Route path="missions" element={<MissionsPage />} />
+        <Route path="availability" element={<VolunteerPage />} />
+        <Route path="vehicles" element={<VehiclesPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

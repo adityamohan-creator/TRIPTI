@@ -93,6 +93,43 @@ const RESOURCES = [
   },
 ]
 
+/**
+ * A fleet, so assignment has something to rank and transport fit stops reading
+ * "not assessed". One refrigerated van matters specifically: without it no
+ * perishable load can be assigned at all.
+ */
+const VEHICLES = [
+  {
+    label: 'DEMO — Refrigerated van',
+    type: 'van',
+    capacity_units: 500,
+    capacity_kg: 900,
+    refrigerated: true,
+    availability: 'available',
+    lat: 28.5706,
+    lon: 77.3272,
+  },
+  {
+    label: 'DEMO — Flatbed truck',
+    type: 'truck',
+    capacity_units: 5000,
+    capacity_kg: 4000,
+    refrigerated: false,
+    availability: 'available',
+    lat: 28.5355,
+    lon: 77.391,
+  },
+]
+
+const VOLUNTEER_RECORD = {
+  availability: 'available',
+  skills: ['driving', 'lifting', 'local-knowledge'],
+  max_concurrent_missions: 2,
+  lat: 28.6,
+  lon: 77.35,
+  notes: 'DEMO volunteer. Available for the demo window.',
+}
+
 const REPORT =
   'Flooding near Sector 62 since last night. Around 300 people are stranded on upper floors, including elderly residents. Food and drinking water are urgently needed.'
 
@@ -117,29 +154,96 @@ async function findDemoUsers() {
 async function reset() {
   console.log('Removing demo data…\n')
 
-  // Incidents and resources first: deleting a user cascades its profile, and a
-  // profile referenced by a resource would block on the foreign key.
-  const { data: resources } = await admin
-    .from('resources')
+  const users = await findDemoUsers()
+  const userIds = users.map((u) => u.id)
+
+  /*
+   * Order matters, and it is not obvious.
+   *
+   * Deleting an auth user cascades to its profile, but profiles are referenced
+   * by incidents.reported_by, resources.owner_id, missions.created_by,
+   * response_plans.created_by and status_history.changed_by — none of which
+   * cascade. Postgres refuses the delete and Supabase reports it as the
+   * unhelpfully generic "Database error deleting user". Everything a demo user
+   * touched has to go first.
+   */
+  const removed = {}
+
+  const { data: plans } = await admin
+    .from('response_plans')
     .delete()
-    .like('label', 'DEMO —%')
+    .in('created_by', userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000'])
     .select('id')
-  console.log(`  ${GREEN}✔${RESET} resources removed ${DIM}(${resources?.length ?? 0})${RESET}`)
+  removed.plans = plans?.length ?? 0
+
+  const { data: resourceRows } = await admin
+    .from('resources')
+    .select('id')
+    .like('label', 'DEMO —%')
+  const resourceIds = (resourceRows ?? []).map((r) => r.id)
+
+  if (resourceIds.length > 0) {
+    const { data: missions } = await admin
+      .from('missions')
+      .delete()
+      .in('resource_id', resourceIds)
+      .select('id')
+    removed.missions = missions?.length ?? 0
+  }
 
   const { data: incidents } = await admin
     .from('incidents')
     .delete()
     .like('report_text', `%${REPORT.slice(0, 40)}%`)
     .select('id')
-  console.log(`  ${GREEN}✔${RESET} incidents removed ${DIM}(${incidents?.length ?? 0})${RESET}`)
+  removed.incidents = incidents?.length ?? 0
 
-  const users = await findDemoUsers()
+  const { data: resources } = await admin
+    .from('resources')
+    .delete()
+    .like('label', 'DEMO —%')
+    .select('id')
+  removed.resources = resources?.length ?? 0
+
+  const { data: vehicles } = await admin
+    .from('vehicles')
+    .delete()
+    .like('label', 'DEMO —%')
+    .select('id')
+  removed.vehicles = vehicles?.length ?? 0
+
+  if (userIds.length > 0) {
+    // The audit trail is append-only during operations; a wholesale demo reset
+    // is the one time its rows go with the data they describe, rather than
+    // being left pointing at incidents that no longer exist.
+    await admin.from('status_history').delete().in('changed_by', userIds)
+    await admin.from('volunteers').delete().in('user_id', userIds)
+  }
+
+  for (const [what, count] of Object.entries(removed)) {
+    console.log(`  ${GREEN}✔${RESET} ${what} removed ${DIM}(${count})${RESET}`)
+  }
+
+  // Counted, not assumed: the previous version printed the number of accounts
+  // it tried to delete even when every one of them had just failed.
+  let deleted = 0
+  const failures = []
   for (const user of users) {
     const { error } = await admin.auth.admin.deleteUser(user.id)
-    if (error) console.log(`  ${RED}x${RESET} ${user.email}: ${error.message}`)
+    if (error) failures.push(`${user.email}: ${error.message}`)
+    else deleted++
   }
-  console.log(`  ${GREEN}✔${RESET} accounts removed ${DIM}(${users.length})${RESET}`)
+
+  console.log(`  ${GREEN}✔${RESET} accounts removed ${DIM}(${deleted} of ${users.length})${RESET}`)
+  for (const failure of failures) console.log(`  ${RED}x${RESET} ${failure}`)
+
+  if (failures.length > 0) {
+    console.log(`\n${RED}Some accounts could not be removed.${RESET} Something outside the demo data still references them.`)
+    return 1
+  }
+
   console.log('\nDemo data removed.')
+  return 0
 }
 
 async function token(email) {
@@ -158,6 +262,18 @@ async function call(path, accessToken, body) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  const parsed = text ? JSON.parse(text) : null
+  if (!res.ok) throw new Error(`${path} → ${res.status}: ${parsed?.error ?? res.statusText}`)
+  return parsed
+}
+
+async function callPut(path, accessToken, body) {
+  const res = await fetch(`${API}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify(body),
   })
   const text = await res.text()
@@ -207,6 +323,26 @@ async function seed() {
       `  ${GREEN}✔${RESET} ${created.label} ${DIM}${created.available_quantity ?? 'unmetered'} ${created.unit ?? ''}${RESET}`,
     )
   }
+
+  // A fleet, owned by the volunteer, published through the real API.
+  const volunteerToken = await token(`volunteer@${DEMO_DOMAIN}`)
+  const vehicleIds = []
+  for (const vehicle of VEHICLES) {
+    const { vehicle: created } = await call('/vehicles', volunteerToken, vehicle)
+    vehicleIds.push(created.id)
+    console.log(
+      `  ${GREEN}✔${RESET} ${created.label} ${DIM}${created.capacity_units} units${created.refrigerated ? ', refrigerated' : ''}${RESET}`,
+    )
+  }
+
+  // The volunteer's own availability — the thing that makes them assignable.
+  const { volunteer } = await callPut('/volunteers/me', volunteerToken, {
+    ...VOLUNTEER_RECORD,
+    vehicle_id: vehicleIds[0] ?? null,
+  })
+  console.log(
+    `  ${GREEN}✔${RESET} volunteer availability ${DIM}${volunteer.availability}, ${volunteer.skills.length} skills${RESET}`,
+  )
 
   // An incident, filed by the citizen through the real API — this runs
   // extraction, writes the needs, and appends to the audit trail.
