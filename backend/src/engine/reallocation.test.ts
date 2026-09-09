@@ -100,6 +100,18 @@ describe('what may never be taken', () => {
     expect(check.reason).toMatch(/life-critical/i)
   })
 
+  it('refuses to release when the donor need is unknown', () => {
+    /*
+     * The dangerous case. If the need a commitment serves was not loaded, every
+     * check that reads it silently passes: lifeCritical is undefined, so a
+     * rescue need looks unprotected, and its priority reads as 0, so any move
+     * clears the churn gate by a mile. Unknown must mean protected.
+     */
+    const check = isReleasable(commitment(), undefined)
+    expect(check.releasable).toBe(false)
+    expect(check.reason).toMatch(/could not be identified/i)
+  })
+
   it('knows delivered stock is already gone', () => {
     for (const status of ['delivered', 'verified'] as const) {
       expect(isReleasable(commitment({ missionStatus: status }), lowNeed).releasable).toBe(false)

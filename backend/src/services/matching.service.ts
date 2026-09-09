@@ -50,7 +50,22 @@ export interface PoolSnapshot {
   resourcesMissingCoordinates: string[]
 }
 
-export async function loadPool(now: number = Date.now()): Promise<PoolSnapshot> {
+export interface LoadPoolOptions {
+  /**
+   * Keep needs that live matches already cover.
+   *
+   * Planning excludes them — proposing work already under way is duplicate
+   * work. Reallocation must include them, because those needs are exactly the
+   * *donors*: without them loaded, every check that reads a donor silently
+   * passes and the safety rules stop firing.
+   */
+  includeCovered?: boolean
+}
+
+export async function loadPool(
+  now: number = Date.now(),
+  options: LoadPoolOptions = {},
+): Promise<PoolSnapshot> {
   const [needsResult, resourcesResult, vehiclesResult, liveMatches] = await Promise.all([
     admin
       .from('needs')
@@ -116,10 +131,10 @@ export async function loadPool(now: number = Date.now()): Promise<PoolSnapshot> 
     // An unmetered need with anything already in flight is covered as far as
     // this planner can tell — there is no figure to compare against, so
     // planning it again would only duplicate the run.
-    if (row.quantity == null && hasLiveMatch) continue
+    if (!options.includeCovered && row.quantity == null && hasLiveMatch) continue
 
     const outstanding = row.quantity == null ? null : Number(row.quantity) - alreadyCommitted
-    if (outstanding !== null && outstanding <= 0) continue
+    if (!options.includeCovered && outstanding !== null && outstanding <= 0) continue
 
     needs.push({
       ...toPriorityInput(
@@ -131,8 +146,10 @@ export async function loadPool(now: number = Date.now()): Promise<PoolSnapshot> 
       incidentId: row.incident_id,
       kind: row.kind,
       // Only what is still outstanding goes to the matcher, so a partly served
-      // need asks for the remainder rather than the whole thing again.
-      quantity: outstanding,
+      // need asks for the remainder rather than the whole thing again. A
+      // reallocation keeps the original figure, because it is judging how badly
+      // this need is served, not asking for a top-up.
+      quantity: options.includeCovered ? row.quantity : outstanding,
       at: { lat: incident.lat, lon: incident.lon },
       lifeCritical: LIFE_CRITICAL_KINDS.has(row.kind),
     })

@@ -72,7 +72,22 @@ export function isReleasable(
   commitment: Commitment,
   donorNeed: Need | undefined,
 ): ReleasableCheck {
-  if (donorNeed?.lifeCritical) {
+  /*
+   * An unknown donor is protected, not permitted.
+   *
+   * Every check below reads the need it serves. If that need was not loaded,
+   * `lifeCritical` is undefined and reads as false, so a rescue commitment
+   * looks fair game; its priority reads as 0, so any move clears the churn gate
+   * by a mile. The absence of information must never present as permission.
+   */
+  if (!donorNeed) {
+    return {
+      releasable: false,
+      reason: 'The need it serves could not be identified, so it is left alone.',
+    }
+  }
+
+  if (donorNeed.lifeCritical) {
     return {
       releasable: false,
       reason: 'The need it serves is life-critical and is never reallocated automatically.',

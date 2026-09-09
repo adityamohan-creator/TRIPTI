@@ -79,7 +79,17 @@ export interface ReallocationOptions {
  */
 export async function previewReallocation(options: ReallocationOptions = {}) {
   const now = Date.now()
-  const [pool, commitments] = await Promise.all([loadPool(now), loadCommitments()])
+  /*
+   * includeCovered, because a reallocation's donors *are* the covered needs.
+   * Loading the planning view instead leaves every donor unknown, and an
+   * unknown donor makes the life-critical check read undefined and the churn
+   * gate compare against zero — the two protections that matter most, silently
+   * off.
+   */
+  const [pool, commitments] = await Promise.all([
+    loadPool(now, { includeCovered: true }),
+    loadCommitments(),
+  ])
 
   const proposal = proposeReallocation({
     needs: pool.needs,
