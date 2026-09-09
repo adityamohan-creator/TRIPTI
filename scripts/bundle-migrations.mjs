@@ -50,8 +50,13 @@ const STEPS = [
   },
   {
     file: 'step-4.sql',
-    includes: ['0007_audit_entity_plan.sql'],
-    note: 'Lets the audit trail name a response plan, and repairs rows written before it could.',
+    includes: ['0007_audit_entity_plan.sql', '0008_mission_verified.sql'],
+    note: 'Audit labels for plans, and the verified mission status. Let this commit before step 5 — step 5 uses the new enum value.',
+  },
+  {
+    file: 'step-5.sql',
+    includes: ['0009_mission_lifecycle.sql'],
+    note: 'Stock consumption on delivery, and race-free volunteer assignment. Run after step 4 has committed.',
   },
 ]
 

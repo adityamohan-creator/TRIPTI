@@ -77,6 +77,55 @@ missionsRouter.post(
   },
 )
 
+/** What this caller may do with this mission right now. */
+missionsRouter.get('/:id/actions', async (req, res, next) => {
+  try {
+    res.json(await service.missionActions(req.user!, uuidParam(req)))
+  } catch (err) {
+    next(err)
+  }
+})
+
+const Transition = z.object({
+  status: z.enum([
+    'accepted',
+    'en_route',
+    'delivered',
+    'verified',
+    'failed',
+    'cancelled',
+  ]),
+  note: z.string().max(1000).nullish(),
+})
+
+/**
+ * Moves a mission along.
+ *
+ * Deliberately not requireRole: a volunteer advances their own run and a
+ * coordinator closes it, and which of those you are depends on the mission, not
+ * on your role alone. The service decides, using the same state machine the UI
+ * reads its buttons from.
+ */
+missionsRouter.post('/:id/status', async (req, res, next) => {
+  try {
+    const parsed = Transition.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid status payload' })
+      return
+    }
+    res.json(
+      await service.transitionMission(
+        req.user!,
+        uuidParam(req),
+        parsed.data.status,
+        parsed.data.note,
+      ),
+    )
+  } catch (err) {
+    next(err)
+  }
+})
+
 missionsRouter.post(
   '/:id/route',
   requireRole('coordinator', 'admin'),

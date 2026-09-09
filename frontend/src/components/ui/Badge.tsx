@@ -70,7 +70,11 @@ const MISSION_TONE: Record<MissionStatus, Tone> = {
   proposed: 'neutral',
   accepted: 'brand',
   en_route: 'brand',
-  delivered: 'positive',
+  // Delivered is reported by the volunteer; verified is confirmed by a
+  // coordinator. Only the second one is a settled outcome, so only the second
+  // one reads as success.
+  delivered: 'warning',
+  verified: 'positive',
   failed: 'danger',
   cancelled: 'neutral',
 }

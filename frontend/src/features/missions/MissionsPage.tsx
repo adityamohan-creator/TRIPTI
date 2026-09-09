@@ -3,14 +3,21 @@ import { Alert } from '../../components/ui/Alert'
 import { Badge, StatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/Dialog'
 import { SkeletonList } from '../../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../../components/ui/States'
 import { useToast } from '../../components/ui/toast-context'
 import { useAsync } from '../../hooks/useAsync'
+import { useRealtime } from '../../hooks/useRealtime'
 import { get, post } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { formatCoords, formatQuantity, timeAgo } from '../../lib/format'
-import type { CandidateResponse, Mission } from '../../types/api'
+import type {
+  CandidateResponse,
+  Mission,
+  MissionAction,
+  MissionActions,
+} from '../../types/api'
 import { useAuth } from '../auth/auth-context'
 
 export function MissionsPage() {
@@ -21,6 +28,10 @@ export function MissionsPage() {
     () => get<{ missions: Mission[] }>('/missions'),
     [],
   )
+
+  // The board updates itself: a volunteer marking a run delivered should
+  // appear on the coordinator's screen without anyone pressing refresh.
+  useRealtime(['missions'], reload)
 
   const isStaff = profile?.role === 'coordinator' || profile?.role === 'admin'
   const missions = data?.missions ?? []
@@ -125,6 +136,14 @@ function MissionDetail({
   const [assigning, setAssigning] = useState<string | null>(null)
   const [routing, setRouting] = useState(false)
 
+  const [pending, setPending] = useState<MissionAction | null>(null)
+  const [moving, setMoving] = useState(false)
+
+  const actions = useAsync(
+    () => get<MissionActions>(`/missions/${mission.id}/actions`),
+    [mission.id, mission.status],
+  )
+
   const candidates = useAsync(
     () =>
       canDispatch
@@ -147,6 +166,21 @@ function MissionDetail({
       toast.error('Could not assign', err instanceof Error ? err.message : '')
     } finally {
       setAssigning(null)
+    }
+  }
+
+  async function move(action: MissionAction) {
+    setMoving(true)
+    try {
+      await post(`/missions/${mission.id}/status`, { status: action.to })
+      toast.success(`Mission ${action.to.replace('_', ' ')}`)
+      onChanged()
+      actions.reload()
+      setPending(null)
+    } catch (err) {
+      toast.error('Could not update this mission', err instanceof Error ? err.message : '')
+    } finally {
+      setMoving(false)
     }
   }
 
@@ -185,9 +219,32 @@ function MissionDetail({
         </h1>
       </div>
 
+      {actions.data && actions.data.actions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {actions.data.actions.map((action) => (
+            <Button
+              key={action.to}
+              variant={action.destructive ? 'secondary' : 'primary'}
+              loading={moving && pending?.to === action.to}
+              onClick={() => (action.destructive ? setPending(action) : move(action))}
+              title={action.detail}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {actions.data && actions.data.actions.length === 0 && (
+        <Alert tone="info">
+          This mission is {actions.data.status} and cannot change. A correction is a
+          new mission, so the record of what happened stays true.
+        </Alert>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-5">
-          {canDispatch && (
+          {canDispatch && mission.status === 'proposed' && (
             <Card>
               <CardHeader
                 title="Who should run this"
@@ -344,7 +401,39 @@ function MissionDetail({
           )}
         </div>
       </div>
+
+      <MissionConfirm
+        action={pending}
+        loading={moving}
+        onConfirm={() => pending && move(pending)}
+        onCancel={() => setPending(null)}
+      />
     </section>
+  )
+}
+
+function MissionConfirm({
+  action,
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  action: MissionAction | null
+  loading: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <ConfirmDialog
+      open={action !== null}
+      title={action ? `${action.label}?` : ''}
+      description={action?.detail}
+      confirmLabel={action?.label ?? 'Confirm'}
+      destructive
+      loading={loading}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   )
 }
 

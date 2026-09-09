@@ -5,6 +5,13 @@ import {
   assignMission,
 } from '../engine/assignment.js'
 import type { Coords } from '../engine/match.js'
+import {
+  type Actor,
+  type MissionStatus,
+  allowedTransitions,
+  canTransition,
+  stockEffect,
+} from '../engine/missionLifecycle.js'
 import { conflict, notFound } from '../lib/errors.js'
 import { recordStatusChange } from '../lib/history.js'
 import type { AuthUser } from '../middleware/auth.js'
@@ -287,31 +294,39 @@ export async function assignVolunteer(
 
   if (volunteerError) throw volunteerError
   if (!volunteer) throw conflict('That person has not registered as a volunteer.')
-  if (volunteer.availability !== 'available') {
-    throw conflict(`That volunteer is marked ${volunteer.availability}.`)
-  }
 
-  const { count, error: countError } = await admin
-    .from('missions')
-    .select('id', { count: 'exact', head: true })
-    .eq('assigned_to', volunteerId)
-    .in('status', ['accepted', 'en_route'])
+  /*
+   * The write itself re-checks availability and workload inside one statement.
+   *
+   * The lookup above exists only to give a useful message; it cannot be the
+   * guard, because two coordinators reading the same roster would both see
+   * spare capacity and both assign. assign_mission returns false when it loses
+   * that race, and the reasons below explain the most likely cause.
+   */
+  const { data: assigned, error: rpcError } = await admin.rpc('assign_mission', {
+    p_mission_id: missionId,
+    p_volunteer_id: volunteerId,
+    p_vehicle_id: vehicleId,
+  })
 
-  if (countError) throw countError
-  if ((count ?? 0) >= (volunteer.max_concurrent_missions ?? 1)) {
+  if (rpcError) throw rpcError
+
+  if (!assigned) {
+    if (volunteer.availability !== 'available') {
+      throw conflict(`That volunteer is marked ${volunteer.availability}.`)
+    }
     throw conflict(
-      `That volunteer is already running ${count} mission(s), their stated limit.`,
+      `That volunteer is already at their stated limit of ${volunteer.max_concurrent_missions} mission(s).`,
     )
   }
 
-  const { data, error: updateError } = await admin
+  const { data, error: readError } = await admin
     .from('missions')
-    .update({ assigned_to: volunteerId, vehicle_id: vehicleId })
-    .eq('id', missionId)
     .select(MISSION_COLUMNS)
+    .eq('id', missionId)
     .single()
 
-  if (updateError) throw updateError
+  if (readError) throw readError
 
   await recordStatusChange({
     entityType: 'mission',
@@ -373,4 +388,152 @@ export async function buildRoute(user: AuthUser, missionId: string) {
   })
 
   return { route }
+}
+
+/**
+ * Moves a mission along, and moves the stock with it.
+ *
+ * The legality of the move is decided by `engine/missionLifecycle.ts`; this
+ * applies the consequences. The stock effect is the part worth care: a mission
+ * that is cancelled without releasing its reservation makes real stock
+ * invisible to every future plan while it sits untouched in a warehouse.
+ */
+export async function transitionMission(
+  user: AuthUser,
+  missionId: string,
+  to: MissionStatus,
+  note?: string | null,
+) {
+  const { data: mission, error } = await admin
+    .from('missions')
+    .select('id, status, assigned_to, resource_id, need_id, quantity')
+    .eq('id', missionId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!mission) throw notFound('No such mission')
+
+  const isCoordinator = ['coordinator', 'admin'].includes(user.role)
+  const isAssignee = mission.assigned_to === user.id
+
+  // Someone with no relationship to the mission should not learn it exists.
+  if (!isCoordinator && !isAssignee) throw notFound('No such mission')
+
+  const actor: Actor = isCoordinator ? 'coordinator' : 'assignee'
+  const check = canTransition(mission.status as MissionStatus, to, actor)
+  if (!check.ok) throw conflict(check.reason ?? 'That move is not allowed.')
+
+  const effect = stockEffect(to)
+  if (effect === 'consume') {
+    const { error: consumeError } = await admin.rpc('consume_resource', {
+      p_resource_id: mission.resource_id,
+      p_amount: mission.quantity,
+    })
+    if (consumeError) throw consumeError
+  } else if (effect === 'release') {
+    const { error: releaseError } = await admin.rpc('release_resource', {
+      p_resource_id: mission.resource_id,
+      p_amount: mission.quantity,
+    })
+    if (releaseError) throw releaseError
+  }
+
+  const patch: Record<string, unknown> = { status: to }
+  if (to === 'verified') {
+    patch.verified_at = new Date().toISOString()
+    patch.verified_by = user.id
+    patch.verification_note = note ?? null
+  }
+
+  const { data, error: updateError } = await admin
+    .from('missions')
+    .update(patch)
+    .eq('id', missionId)
+    .select(MISSION_COLUMNS)
+    .single()
+
+  if (updateError) throw updateError
+
+  await recordStatusChange({
+    entityType: 'mission',
+    entityId: missionId,
+    fromStatus: mission.status,
+    toStatus: to,
+    changedBy: user.id,
+    note:
+      note ??
+      (effect === 'consume'
+        ? 'Delivered; stock consumed.'
+        : effect === 'release'
+          ? 'Stock released back to the pool.'
+          : null),
+  })
+
+  // A delivered mission closes its need when nothing is left outstanding.
+  if (to === 'verified') await settleNeed(mission.need_id as string)
+
+  return { mission: data, effect }
+}
+
+/**
+ * Marks a need met once its deliveries cover it.
+ *
+ * Counted from verified missions only. A mission the volunteer marked delivered
+ * but nobody confirmed is not evidence that anyone received anything, and a
+ * need closed on that basis stops appearing in plans while still being unmet.
+ */
+async function settleNeed(needId: string) {
+  const [{ data: need }, { data: delivered }] = await Promise.all([
+    admin.from('needs').select('id, quantity, status').eq('id', needId).maybeSingle(),
+    admin.from('missions').select('quantity').eq('need_id', needId).eq('status', 'verified'),
+  ])
+
+  if (!need || need.status === 'met' || need.status === 'cancelled') return
+
+  const totalDelivered = (delivered ?? []).reduce(
+    (sum, m) => sum + Number((m as { quantity: number | null }).quantity ?? 0),
+    0,
+  )
+
+  // An unmetered need is settled by any verified delivery: there is no figure
+  // to compare against, and leaving it open forever would keep re-matching it.
+  const met =
+    need.quantity == null ? (delivered ?? []).length > 0 : totalDelivered >= Number(need.quantity)
+
+  const next = met ? 'met' : totalDelivered > 0 ? 'partial' : need.status
+  if (next === need.status) return
+
+  await admin.from('needs').update({ status: next }).eq('id', needId)
+  await recordStatusChange({
+    entityType: 'need',
+    entityId: needId,
+    fromStatus: need.status,
+    toStatus: next,
+    changedBy: null,
+    note: `Settled from verified deliveries${need.quantity == null ? '' : ` (${totalDelivered} of ${need.quantity})`}.`,
+  })
+}
+
+/** What this caller may do with this mission right now. */
+export async function missionActions(user: AuthUser, missionId: string) {
+  const { data: mission, error } = await admin
+    .from('missions')
+    .select('id, status, assigned_to')
+    .eq('id', missionId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!mission) throw notFound('No such mission')
+
+  const isCoordinator = ['coordinator', 'admin'].includes(user.role)
+  const isAssignee = mission.assigned_to === user.id
+  if (!isCoordinator && !isAssignee) throw notFound('No such mission')
+
+  return {
+    status: mission.status,
+    actions: allowedTransitions(
+      mission.status as MissionStatus,
+      isCoordinator ? 'coordinator' : 'assignee',
+    ),
+  }
 }

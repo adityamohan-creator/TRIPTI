@@ -45,6 +45,7 @@ export type MissionStatus =
   | 'accepted'
   | 'en_route'
   | 'delivered'
+  | 'verified'
   | 'failed'
   | 'cancelled'
 
@@ -384,4 +385,18 @@ export interface AssignmentCandidate {
 export interface CandidateResponse {
   candidates: AssignmentCandidate[]
   excluded: { volunteerId: string; name: string | null; reason: string }[]
+}
+
+/** A move the current user may make on a mission, from the state machine. */
+export interface MissionAction {
+  to: MissionStatus
+  actors: ('assignee' | 'coordinator')[]
+  label: string
+  detail: string
+  destructive?: boolean
+}
+
+export interface MissionActions {
+  status: MissionStatus
+  actions: MissionAction[]
 }

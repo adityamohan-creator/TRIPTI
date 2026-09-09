@@ -6,7 +6,9 @@
 -- which is the opposite of what an append-only trail is for. The constraint was
 -- the thing that was wrong; coercing the data to fit it was the wrong response.
 
-alter table status_history drop constraint status_history_entity_type_check;
+-- if exists so the file stays re-runnable: it now ships bundled with 0008, and
+-- anyone who applied it on its own must not hit an error on the second pass.
+alter table status_history drop constraint if exists status_history_entity_type_check;
 
 alter table status_history
   add constraint status_history_entity_type_check
