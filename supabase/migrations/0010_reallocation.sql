@@ -5,9 +5,14 @@
 -- group of people and gives it to another. What was proposed, what was
 -- protected, who approved it and why all have to survive the pool moving on.
 
-create type reallocation_status as enum ('proposed', 'approved', 'discarded');
+-- Guarded so the file stays re-runnable: it ships bundled with 0011, and anyone
+-- who applied it on its own must not hit an error on the second pass.
+do $$ begin
+  create type reallocation_status as enum ('proposed', 'approved', 'discarded');
+exception when duplicate_object then null;
+end $$;
 
-create table reallocations (
+create table if not exists reallocations (
   id uuid primary key default gen_random_uuid(),
   label text,
   status reallocation_status not null default 'proposed',
@@ -35,20 +40,22 @@ create table reallocations (
   updated_at timestamptz not null default now()
 );
 
-create index reallocations_status_idx on reallocations (status, created_at desc);
+create index if not exists reallocations_status_idx on reallocations (status, created_at desc);
 
 alter table reallocations enable row level security;
 
+drop trigger if exists reallocations_set_updated_at on reallocations;
 create trigger reallocations_set_updated_at
   before update on reallocations
   for each row execute function set_updated_at();
 
+drop policy if exists "staff read reallocations" on reallocations;
 create policy "staff read reallocations" on reallocations
   for select using (current_user_role() in ('coordinator', 'admin'));
 
 -- Which reallocation, if any, produced a match.
-alter table matches add column reallocation_id uuid references reallocations (id);
-create index matches_reallocation_idx on matches (reallocation_id);
+alter table matches add column if not exists reallocation_id uuid references reallocations (id);
+create index if not exists matches_reallocation_idx on matches (reallocation_id);
 
 -- ------------------------------------------------------------- execution
 
@@ -114,4 +121,7 @@ $$;
 
 revoke all on function reallocate_match(uuid, uuid, numeric) from public, anon, authenticated;
 
-alter publication supabase_realtime add table reallocations;
+do $$ begin
+  alter publication supabase_realtime add table reallocations;
+exception when duplicate_object then null;
+end $$;

@@ -60,7 +60,7 @@ const STEPS = [
   },
   {
     file: 'step-6.sql',
-    includes: ['0010_reallocation.sql'],
+    includes: ['0010_reallocation.sql', '0011_reallocate_committed.sql'],
     note: 'Dynamic reallocation. Run after step 5.',
   },
 ]
