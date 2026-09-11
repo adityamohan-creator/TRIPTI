@@ -151,6 +151,19 @@ Vercel it is not: the SPA rewrite in `frontend/vercel.json` deliberately
 excludes `api/`, so an unset value produces a clean 404 on every data call
 rather than an HTML page arriving where JSON was expected.
 
+### Do not put comments in `vercel.json`
+
+JSON has no comment syntax, and Vercel validates the file against a strict
+schema that rejects unknown properties outright:
+
+```
+Invalid request: `rewrites[0]` should NOT have additional property `_comment`.
+```
+
+A `"_comment"` key added to explain the `api/` exclusion above failed the
+deploy on exactly this. The reasoning lives here instead — that is what this
+section is for.
+
 ---
 
 ## 4. The ordering problem
