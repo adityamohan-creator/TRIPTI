@@ -5,7 +5,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon|icons).*)",
+      "_comment": "SPA fallback. `api/` is excluded deliberately: without it a call to /api/impact is rewritten to index.html and the client receives an HTML page where it expected JSON, which surfaces as a parse failure rather than as 'the API is not reachable'. Excluded, the same mistake returns a plain 404.",
+      "source": "/((?!assets/|api/|favicon|icons).*)",
       "destination": "/index.html"
     }
   ],

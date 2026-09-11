@@ -42,6 +42,21 @@ export default defineConfig(({ command, mode }) => {
           'not belong here.',
       )
     }
+
+    /*
+     * Not fatal, because it is legitimate to serve the app behind a proxy that
+     * forwards /api to the backend. But on a static host there is no such
+     * proxy, and the failure is quiet: the app loads and every data call fails.
+     * Worth saying out loud at the one moment someone is looking.
+     */
+    if (!env.VITE_API_BASE_URL) {
+      console.warn(
+        '\n  VITE_API_BASE_URL is not set. The bundle will call /api on its own\n' +
+          '  origin, which only works if something there proxies /api to the\n' +
+          '  backend. On Vercel or any static host, set it to the deployed API,\n' +
+          '  including the /api suffix.\n',
+      )
+    }
   }
 
   return {
