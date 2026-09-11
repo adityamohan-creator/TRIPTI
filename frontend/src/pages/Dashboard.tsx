@@ -2,6 +2,7 @@ import { Card, CardBody } from '../components/ui/Card'
 import { Skeleton } from '../components/ui/Skeleton'
 import { ErrorState } from '../components/ui/States'
 import { useAuth } from '../features/auth/auth-context'
+import { ImpactSection } from '../features/impact/ImpactSection'
 import { useAsync } from '../hooks/useAsync'
 import { get } from '../lib/api'
 import { SEVERITIES, type Incident, type Severity } from '../types/api'
@@ -66,8 +67,8 @@ export function Dashboard() {
           {firstName ? `Situation overview, ${firstName}` : 'Situation overview'}
         </h1>
         <p className="mt-1 text-sm text-ink-2">
-          Live counts from the incident board. Impact metrics, resource utilisation and
-          mission charts land with the analytics work.
+          Live counts from the incident board, and what the response has confirmed
+          delivered.
         </p>
       </div>
 
@@ -124,6 +125,13 @@ export function Dashboard() {
               </dl>
             </CardBody>
           </Card>
+
+          {/*
+            Impact loads on its own rather than as part of the board request: it
+            is a heavier aggregate, and the situation counts above should not
+            wait on a report to appear.
+          */}
+          <ImpactSection />
         </>
       )}
     </section>

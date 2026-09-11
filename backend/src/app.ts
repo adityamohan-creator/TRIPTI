@@ -6,6 +6,7 @@ import { AppError } from './lib/errors.js'
 import { generalLimiter } from './middleware/rateLimit.js'
 import { fleetRouter } from './routes/fleet.js'
 import { geoRouter } from './routes/geo.js'
+import { impactRouter } from './routes/impact.js'
 import { incidentsRouter } from './routes/incidents.js'
 import { missionsRouter } from './routes/missions.js'
 import { matchRouter } from './routes/match.js'
@@ -53,6 +54,7 @@ export function createApp() {
   app.use('/api/plans', plansRouter)
   app.use('/api/reallocation', reallocationRouter)
   app.use('/api/missions', missionsRouter)
+  app.use('/api/impact', impactRouter)
   app.use('/api/geocode', geoRouter)
   app.use('/api', fleetRouter)
   app.use('/api/match', matchRouter)

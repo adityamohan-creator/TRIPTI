@@ -63,6 +63,11 @@ const STEPS = [
     includes: ['0010_reallocation.sql', '0011_reallocate_committed.sql'],
     note: 'Dynamic reallocation. Run after step 5.',
   },
+  {
+    file: 'step-7.sql',
+    includes: ['0012_impact_source_of_truth.sql'],
+    note: 'Reporting indexes and the note on impact_metrics. Run after step 6.',
+  },
 ]
 
 const available = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql'))

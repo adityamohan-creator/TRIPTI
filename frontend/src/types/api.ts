@@ -441,3 +441,51 @@ export interface Reallocation {
   note: string | null
   created_at: string
 }
+
+// ------------------------------------------------------------- impact
+
+export interface ImpactTotals {
+  incidentsServed: number
+  missionsCompleted: number
+  peopleHelped: number
+  /** Incidents that were reached but never said how many people they held. */
+  incidentsWithoutHeadcount: number
+  mealsDelivered: number
+  waterLitres: number
+  foodKgRescued: number
+  medianResponseMinutes: number | null
+  fastestResponseMinutes: number | null
+  slowestResponseMinutes: number | null
+}
+
+export interface ImpactDay {
+  date: string
+  deliveries: number
+  incidentsFirstServed: number
+}
+
+export interface ImpactKind {
+  kind: string
+  deliveries: number
+  /** Null when the kind arrived in units that cannot be added together. */
+  quantity: number | null
+  unit: string | null
+}
+
+export interface Utilisation {
+  stockCommitted: number | null
+  volunteersAvailable: number
+  volunteersTotal: number
+  vehiclesAvailable: number
+  vehiclesTotal: number
+}
+
+export interface ImpactReport {
+  window: { days: number; from: string; to: string }
+  totals: ImpactTotals
+  allTime: ImpactTotals
+  timeline: ImpactDay[]
+  byKind: ImpactKind[]
+  /** Operational posture. Null for roles that may not see it. */
+  utilisation: Utilisation | null
+}
