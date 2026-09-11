@@ -56,6 +56,12 @@ const ACCOUNTS = [
   { email: `volunteer@${DEMO_DOMAIN}`, name: 'DEMO Volunteer', role: 'volunteer' },
   { email: `donor@${DEMO_DOMAIN}`, name: 'DEMO Kitchen', role: 'donor', org: 'DEMO Community Kitchen' },
   { email: `citizen@${DEMO_DOMAIN}`, name: 'DEMO Citizen', role: 'citizen' },
+  {
+    email: `ngo@${DEMO_DOMAIN}`,
+    name: 'DEMO Relief Trust',
+    role: 'ngo',
+    org: 'DEMO Relief Trust',
+  },
 ]
 
 const RESOURCES = [
@@ -236,7 +242,7 @@ async function findDemoUsers() {
   return found
 }
 
-async function reset() {
+async function reset({ quiet = false } = {}) {
   console.log('Removing demo data…\n')
 
   const users = await findDemoUsers()
@@ -320,7 +326,7 @@ async function reset() {
   }
 
   for (const [what, count] of Object.entries(removed)) {
-    console.log(`  ${GREEN}✔${RESET} ${what} removed ${DIM}(${count})${RESET}`)
+    if (!quiet) console.log(`  ${GREEN}✔${RESET} ${what} removed ${DIM}(${count})${RESET}`)
   }
 
   // Counted, not assumed: the previous version printed the number of accounts
@@ -333,7 +339,9 @@ async function reset() {
     else deleted++
   }
 
-  console.log(`  ${GREEN}✔${RESET} accounts removed ${DIM}(${deleted} of ${users.length})${RESET}`)
+  if (!quiet) {
+    console.log(`  ${GREEN}✔${RESET} accounts removed ${DIM}(${deleted} of ${users.length})${RESET}`)
+  }
   for (const failure of failures) console.log(`  ${RED}x${RESET} ${failure}`)
 
   if (failures.length > 0) {
@@ -416,6 +424,18 @@ async function callPut(path, accessToken, body) {
 }
 
 async function seed() {
+  /*
+   * Always clear first. A seed exists to produce one known state, and running
+   * it twice produced two of everything — twelve incidents, doubled
+   * headcounts, an impact figure that was simply wrong. Nobody runs a seed
+   * script exactly once while preparing a demo.
+   *
+   * Safe because reset only removes what this script created: resources and
+   * vehicles labelled DEMO, incidents filed by the demo accounts, and the
+   * accounts themselves.
+   */
+  await reset({ quiet: true })
+
   console.log('Seeding demo data…\n')
 
   // Accounts. email_confirm bypasses the confirmation mail entirely, so this
@@ -451,7 +471,10 @@ async function seed() {
   // Resources, published by the donor through the real API.
   const donorToken = await token(`donor@${DEMO_DOMAIN}`)
   for (const resource of RESOURCES) {
-    const { resource: created } = await call('/resources', donorToken, resource)
+    const { resource: created } = await withRetry(
+      () => call('/resources', donorToken, resource),
+      'resource',
+    )
     console.log(
       `  ${GREEN}✔${RESET} ${created.label} ${DIM}${created.available_quantity ?? 'unmetered'} ${created.unit ?? ''}${RESET}`,
     )
@@ -461,7 +484,10 @@ async function seed() {
   const volunteerToken = await token(`volunteer@${DEMO_DOMAIN}`)
   const vehicleIds = []
   for (const vehicle of VEHICLES) {
-    const { vehicle: created } = await call('/vehicles', volunteerToken, vehicle)
+    const { vehicle: created } = await withRetry(
+      () => call('/vehicles', volunteerToken, vehicle),
+      'vehicle',
+    )
     vehicleIds.push(created.id)
     console.log(
       `  ${GREEN}✔${RESET} ${created.label} ${DIM}${created.capacity_units} units${created.refrigerated ? ', refrigerated' : ''}${RESET}`,
@@ -469,10 +495,14 @@ async function seed() {
   }
 
   // The volunteer's own availability — the thing that makes them assignable.
-  const { volunteer } = await callPut('/volunteers/me', volunteerToken, {
+  const { volunteer } = await withRetry(
+    () =>
+      callPut('/volunteers/me', volunteerToken, {
     ...VOLUNTEER_RECORD,
-    vehicle_id: vehicleIds[0] ?? null,
-  })
+        vehicle_id: vehicleIds[0] ?? null,
+      }),
+    'volunteer availability',
+  )
   console.log(
     `  ${GREEN}✔${RESET} volunteer availability ${DIM}${volunteer.availability}, ${volunteer.skills.length} skills${RESET}`,
   )
