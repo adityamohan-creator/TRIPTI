@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { DemoTour } from '../features/tour/DemoTour'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -154,6 +155,12 @@ export function AppShell() {
         )}
         <Outlet />
       </main>
+
+      {/*
+        Outside <main> and fixed, so it explains whichever screen is open
+        without becoming part of any one page's layout.
+      */}
+      <DemoTour />
     </div>
   )
 }
