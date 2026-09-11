@@ -2,7 +2,9 @@ import { Suspense, lazy, useState } from 'react'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../../components/ui/States'
+import { LiveIndicator } from '../../components/ui/LiveIndicator'
 import { useAsync } from '../../hooks/useAsync'
+import { useRealtime } from '../../hooks/useRealtime'
 import { cn } from '../../lib/cn'
 import { get } from '../../lib/api'
 import type { ImpactReport } from '../../types/api'
@@ -140,6 +142,13 @@ export function ImpactSection() {
     [days],
   )
 
+  /*
+   * Impact counts verified deliveries, and a delivery becomes verified by a
+   * mission row changing status. `status_history` is what records the moment it
+   * happened, and the median response time is measured from it.
+   */
+  const status = useRealtime(['missions', 'status_history'], reload)
+
   if (error) {
     return <ErrorState title="Could not load impact figures" message={error} onRetry={reload} />
   }
@@ -156,7 +165,10 @@ export function ImpactSection() {
             Confirmed deliveries only. A delivery nobody verified is not counted.
           </p>
         </div>
-        <WindowPicker value={days} onChange={setDays} disabled={loading} />
+        <div className="flex items-center gap-3">
+          <LiveIndicator status={status} />
+          <WindowPicker value={days} onChange={setDays} disabled={loading} />
+        </div>
       </div>
 
       {nothingYet ? (

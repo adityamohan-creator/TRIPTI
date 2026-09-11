@@ -8,6 +8,7 @@ import { SkeletonList } from '../../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../../components/ui/States'
 import { useToast } from '../../components/ui/toast-context'
 import { useAsync } from '../../hooks/useAsync'
+import { LiveIndicator } from '../../components/ui/LiveIndicator'
 import { useRealtime } from '../../hooks/useRealtime'
 import { get, post } from '../../lib/api'
 import type { Reallocation, ReallocationPreview } from '../../types/api'
@@ -31,7 +32,10 @@ export function ReallocationPage() {
 
   // A new incident changes what is worth moving, so the proposal should not go
   // stale while a coordinator is looking at it.
-  useRealtime(['incidents', 'needs', 'missions', 'matches'], preview.reload)
+  const liveStatus = useRealtime(
+    ['incidents', 'needs', 'missions', 'matches', 'reallocations'],
+    preview.reload,
+  )
 
   async function apply() {
     setWorking(true)
@@ -69,6 +73,7 @@ export function ReallocationPage() {
             Stock that could be moved to a need that is materially worse off. Nothing is
             moved until you say so, and nothing already in motion is touched.
           </p>
+          <LiveIndicator status={liveStatus} className="mt-2" />
         </div>
         {data && data.moves.length > 0 && (
           <Button onClick={() => setConfirming(true)} loading={working}>

@@ -7,7 +7,9 @@ import { SkeletonList } from '../../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../../components/ui/States'
 import { Table, Td, Th, Tr } from '../../components/ui/Table'
 import { useToast } from '../../components/ui/toast-context'
+import { LiveIndicator } from '../../components/ui/LiveIndicator'
 import { useAsync } from '../../hooks/useAsync'
+import { useRealtime } from '../../hooks/useRealtime'
 import { api, get } from '../../lib/api'
 import { formatQuantity, timeUntil } from '../../lib/format'
 import {
@@ -42,6 +44,14 @@ export function ResourcesPage() {
     () => get<ResourceList>(`/resources?${query.toString()}`),
     [kind, usableOnly],
   )
+
+  /*
+   * `matches` alongside `resources`: reserving stock against a need does not
+   * touch the resource row's quantity, it writes a match. A pool watching only
+   * `resources` would keep showing units as free after a plan had promised
+   * them.
+   */
+  const status = useRealtime(['resources', 'matches'], reload)
 
   const canPublish = profile != null && CAN_PUBLISH_RESOURCES.includes(profile.role)
   const isStaff = profile?.role === 'coordinator' || profile?.role === 'admin'
@@ -80,6 +90,7 @@ export function ResourcesPage() {
               ? 'The supply pool the matching engine draws from.'
               : 'What you have listed, and what is still available on it.'}
           </p>
+          <LiveIndicator status={status} className="mt-2" />
         </div>
         {canPublish && <Button onClick={() => setCreating(true)}>Add resource</Button>}
       </div>

@@ -1,4 +1,5 @@
 import { Alert } from '../components/ui/Alert'
+import { LiveIndicator } from '../components/ui/LiveIndicator'
 import { Skeleton } from '../components/ui/Skeleton'
 import { ErrorState } from '../components/ui/States'
 import {
@@ -10,6 +11,7 @@ import {
   type MapVehicle,
 } from '../features/map/CrisisMap'
 import { useAsync } from '../hooks/useAsync'
+import { useRealtime } from '../hooks/useRealtime'
 import { get } from '../lib/api'
 import { minutesUntil } from '../lib/format'
 import type { Incident, Mission, Resource, Vehicle } from '../types/api'
@@ -26,6 +28,32 @@ export function MapPage() {
   const loading =
     incidents.loading || resources.loading || missions.loading || vehicles.loading
   const error = incidents.error ?? resources.error ?? missions.error ?? vehicles.error
+
+  /*
+   * Four independent reads, one refresh.
+   *
+   * A plain function rather than a useCallback: useRealtime keeps the callback
+   * in a ref and resubscribes only when the table list changes, so a new
+   * identity each render costs nothing. Memoising it here would only invite a
+   * dependency array that has to be kept honest for no benefit.
+   */
+  const reloadAll = () => {
+    incidents.reload()
+    resources.reload()
+    missions.reload()
+    vehicles.reload()
+  }
+
+  /*
+   * `needs` is in the list although the map never draws one: a need changing
+   * is what makes an incident stop being unserved, and the marker colour
+   * depends on it. Subscribing only to what is drawn leaves the map confidently
+   * wrong.
+   */
+  const status = useRealtime(
+    ['incidents', 'needs', 'resources', 'missions', 'vehicles'],
+    reloadAll,
+  )
 
   const located: MapIncident[] = (incidents.data?.incidents ?? [])
     .filter((i) => i.lat != null && i.lon != null && i.status !== 'resolved')
@@ -97,25 +125,19 @@ export function MapPage() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink">Live map</h1>
-        <p className="mt-1 text-sm text-ink-2">
-          Open incidents and available supply. Anything without coordinates is missing
-          from this picture — it is listed below rather than placed by guesswork.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Live map</h1>
+          <p className="mt-1 text-sm text-ink-2">
+            Open incidents and available supply. Anything without coordinates is missing
+            from this picture — it is listed below rather than placed by guesswork.
+          </p>
+        </div>
+        <LiveIndicator status={status} className="mt-1" />
       </div>
 
       {error && !loading && (
-        <ErrorState
-          title="Could not load the map"
-          message={error}
-          onRetry={() => {
-            incidents.reload()
-            resources.reload()
-            missions.reload()
-            vehicles.reload()
-          }}
-        />
+        <ErrorState title="Could not load the map" message={error} onRetry={reloadAll} />
       )}
 
       {loading && <Skeleton className="h-[28rem] w-full" />}

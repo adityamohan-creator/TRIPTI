@@ -65,8 +65,8 @@ const STEPS = [
   },
   {
     file: 'step-7.sql',
-    includes: ['0012_impact_source_of_truth.sql'],
-    note: 'Reporting indexes and the note on impact_metrics. Run after step 6.',
+    includes: ['0012_impact_source_of_truth.sql', '0013_realtime_fleet.sql'],
+    note: 'Reporting indexes, the note on impact_metrics, and live fleet/history. Run after step 6.',
   },
 ]
 

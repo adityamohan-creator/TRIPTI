@@ -5,7 +5,9 @@ import { Card } from '../components/ui/Card'
 import { SkeletonList } from '../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../components/ui/States'
 import { useAuth } from '../features/auth/auth-context'
+import { LiveIndicator } from '../components/ui/LiveIndicator'
 import { useAsync } from '../hooks/useAsync'
+import { useRealtime } from '../hooks/useRealtime'
 import { get } from '../lib/api'
 import type { Incident } from '../types/api'
 
@@ -25,6 +27,8 @@ export function Incidents() {
     [],
   )
 
+  const status = useRealtime(['incidents', 'needs'], reload)
+
   const isReporter = profile?.role === 'citizen' || profile?.role === 'donor'
 
   return (
@@ -37,6 +41,7 @@ export function Incidents() {
               ? 'Reports you have filed, and what has happened to them.'
               : 'Everything currently on the board, newest first.'}
           </p>
+          <LiveIndicator status={status} className="mt-2" />
         </div>
         <Link to="/app/incidents/new">
           <Button>Report an emergency</Button>

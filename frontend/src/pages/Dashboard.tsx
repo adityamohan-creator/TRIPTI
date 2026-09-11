@@ -3,7 +3,9 @@ import { Skeleton } from '../components/ui/Skeleton'
 import { ErrorState } from '../components/ui/States'
 import { useAuth } from '../features/auth/auth-context'
 import { ImpactSection } from '../features/impact/ImpactSection'
+import { LiveIndicator } from '../components/ui/LiveIndicator'
 import { useAsync } from '../hooks/useAsync'
+import { useRealtime } from '../hooks/useRealtime'
 import { get } from '../lib/api'
 import { SEVERITIES, type Incident, type Severity } from '../types/api'
 
@@ -47,6 +49,13 @@ export function Dashboard() {
     [],
   )
 
+  /*
+   * `needs` too: the counts here are per incident, but an incident's status
+   * moves when its needs are met, so a board watching only `incidents` misses
+   * the change that actually mattered.
+   */
+  const status = useRealtime(['incidents', 'needs'], reload)
+
   const incidents = data?.incidents ?? []
   const open = incidents.filter((i) => i.status === 'open')
   const unlocated = incidents.filter((i) => i.lat == null)
@@ -70,6 +79,7 @@ export function Dashboard() {
           Live counts from the incident board, and what the response has confirmed
           delivered.
         </p>
+        <LiveIndicator status={status} className="mt-2" />
       </div>
 
       {error ? (

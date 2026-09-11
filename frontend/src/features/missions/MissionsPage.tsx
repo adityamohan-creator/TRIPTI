@@ -8,6 +8,7 @@ import { SkeletonList } from '../../components/ui/Skeleton'
 import { EmptyState, ErrorState } from '../../components/ui/States'
 import { useToast } from '../../components/ui/toast-context'
 import { useAsync } from '../../hooks/useAsync'
+import { LiveIndicator } from '../../components/ui/LiveIndicator'
 import { useRealtime } from '../../hooks/useRealtime'
 import { get, post } from '../../lib/api'
 import { cn } from '../../lib/cn'
@@ -31,7 +32,11 @@ export function MissionsPage() {
 
   // The board updates itself: a volunteer marking a run delivered should
   // appear on the coordinator's screen without anyone pressing refresh.
-  useRealtime(['missions'], reload)
+  /*
+   * `status_history` too: a transition writes the mission row and its history
+   * row, and the timeline on this page reads the second.
+   */
+  const liveStatus = useRealtime(['missions', 'status_history'], reload)
 
   const isStaff = profile?.role === 'coordinator' || profile?.role === 'admin'
   const missions = data?.missions ?? []
@@ -57,6 +62,7 @@ export function MissionsPage() {
             ? 'The runs assigned to you.'
             : 'Everything an approved plan has dispatched.'}
         </p>
+        <LiveIndicator status={liveStatus} className="mt-2" />
       </div>
 
       {loading && <SkeletonList rows={4} />}
