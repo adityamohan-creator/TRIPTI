@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  Served at the API's root.
+
+  It also satisfies Vercel's requirement that a project with a build command
+  produce an output directory — `npm run build` emits to dist/, which is bundled
+  into the function rather than served, so without this there is nothing static
+  to publish and the deploy fails on an empty output.
+
+  Static files take precedence over the rewrite, so this page answers "/" while
+  every other path reaches the Express app.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>TRIPTI API</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0; min-height: 100vh;
+        display: grid; place-items: center;
+        font: 14px/1.6 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: #fff8cf; color: #17430b;
+      }
+      main { max-width: 30rem; padding: 2rem; }
+      h1 { font-size: 1.1rem; margin: 0 0 .5rem; letter-spacing: -0.01em; }
+      p { margin: 0 0 .75rem; color: #2a7c13; }
+      code {
+        font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+        background: #fbe6c2; padding: .1rem .35rem; border-radius: .25rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #17430b; color: #e4f4dc; }
+        p { color: #a2d888; }
+        code { background: #216010; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>TRIPTI API</h1>
+      <p>
+        This is the backend for TRIPTI, a disaster-response coordination
+        platform. There is no interface here — the app is deployed separately.
+      </p>
+      <p>
+        Health check: <code>/health</code>. Everything else is under
+        <code>/api</code> and requires an access token.
+      </p>
+    </main>
+  </body>
+</html>

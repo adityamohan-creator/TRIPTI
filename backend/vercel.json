@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+
+  "rewrites": [
+    {
+      "_comment": "Every path reaches the one function, which is the whole Express app. Routing stays in app.ts — one place that decides what /api/impact means, shared by `npm start` and by this deployment. Splitting routes across Vercel's filesystem convention would give two answers to that question.",
+      "source": "/((?!_next|favicon).*)",
+      "destination": "/api"
+    }
+  ],
+
+  "functions": {
+    "api/index.js": {
+      "_comment": "Cold starts import the compiled app and validate the environment, and a request that arrives during one waits for it. The default 10s is tight for that plus a Supabase round trip.",
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
+}

@@ -92,10 +92,14 @@ explainable. See [CLAUDE.md](CLAUDE.md) for the full set of constraints.
 
 ## Deployment
 
-Frontend to Vercel (`frontend/vercel.json`), backend to Render (`render.yaml`),
-database on Supabase. The split is deliberate: the API holds the service role
-key, which bypasses every RLS policy and must never be built into anything a
-browser downloads.
+Two Vercel projects from this one repository — root directories `frontend` and
+`backend` — with the database on Supabase. The API runs as a serverless
+function wrapping the same Express app `npm start` runs, so there is one
+definition of every route.
+
+The split into separate projects is deliberate: the API holds the service role
+key, which bypasses every RLS policy and must never reach a browser bundle.
+`render.yaml` is kept as an alternative host for the API.
 
 Full steps, including the two settings that will otherwise bite you, are in
 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
