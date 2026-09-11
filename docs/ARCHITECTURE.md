@@ -1,8 +1,13 @@
 # TRIPTI — Architecture
 
-Status: **Phase 1 complete**. This document describes both what exists today and
-the target architecture the remaining phases build toward. Sections marked
-`[built]` are working code; `[planned]` is not implemented yet.
+Status: **Phases 0–8 complete**. Every P0 requirement in the PRD is built and
+verified against the live project.
+
+Sections below marked `[planned]` were written before the phase that built them
+and have not all been re-annotated; treat `docs/GAP-ANALYSIS.md` as the
+authority on what exists. Still genuinely unbuilt: multi-stop routing
+(`mission_stops`), shortage forecasting, the what-if simulator, trust/fraud
+scoring, and voice intake.
 
 ---
 

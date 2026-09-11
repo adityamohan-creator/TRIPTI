@@ -1,0 +1,52 @@
+# Backend deployment. The frontend deploys separately from frontend/vercel.json.
+#
+# Split on purpose: the API holds the service role key and must never be built
+# into anything a browser downloads. Keeping them on different platforms makes
+# that boundary a deployment fact rather than a convention someone has to
+# remember.
+
+services:
+  - type: web
+    name: tripti-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+
+    # `npm ci` rather than `install`: a deploy must build the lockfile's tree,
+    # not whatever resolves that morning.
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '24'
+
+      # Render assigns the port; config.ts reads it.
+      - key: PORT
+        value: 10000
+
+      # sync: false means Render prompts for the value and stores it encrypted
+      # rather than reading it from this file. None of these belong in git.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # Bypasses row level security. If it ever leaks, rotate it in Supabase
+      # immediately — every RLS policy in the project is void while it is out.
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # Optional. Without it extraction falls back to the deterministic keyword
+      # scan and the app keeps working, with reports marked unread by the model.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+      # Must list the deployed frontend origin, comma separated. Left at the
+      # dev default, the browser app cannot call this API at all.
+      - key: CORS_ORIGINS
+        sync: false

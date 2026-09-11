@@ -54,12 +54,12 @@ role change made with a user's own token.
 | Command             | Does                                        |
 | ------------------- | ------------------------------------------- |
 | `npm run dev`       | Both servers with prefixed output           |
-| `npm run test`      | Backend unit tests (matching engine)        |
+| `npm run test`      | Backend unit tests (182, engine + services) |
 | `npm run typecheck` | Backend `tsc --noEmit` + frontend `tsc -b`  |
 | `npm run build`     | Production build of both                    |
 | `npm run lint`      | Frontend oxlint                             |
 | `npm run health`    | Verify Supabase schema, roles and RLS       |
-| `npm run db:bundle` | Bundle the migrations into two paste-ready blocks |
+| `npm run db:bundle` | Bundle the migrations into paste-ready blocks |
 | `npm run seed`      | Demo accounts, resources and an incident (`-- --reset` to remove) |
 | `npm run set-role`  | Grant a role: `-- you@example.com coordinator` |
 
@@ -92,6 +92,26 @@ explainable. See [CLAUDE.md](CLAUDE.md) for the full set of constraints.
 
 ## Deployment
 
-Frontend to Vercel, backend to Render or Railway, database on Supabase. Set
-`CORS_ORIGINS` on the backend to the deployed frontend origin, and
-`VITE_API_BASE_URL` on the frontend to the deployed API before shipping.
+Frontend to Vercel (`frontend/vercel.json`), backend to Render (`render.yaml`),
+database on Supabase. The split is deliberate: the API holds the service role
+key, which bypasses every RLS policy and must never be built into anything a
+browser downloads.
+
+Full steps, including the two settings that will otherwise bite you, are in
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
+## Documentation
+
+| Doc | For |
+| --- | --- |
+| [SETUP.md](docs/SETUP.md) | Getting it running the first time |
+| [DEMO.md](docs/DEMO.md) | A twelve-minute walkthrough |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the pieces fit |
+| [API.md](docs/API.md) | Every endpoint |
+| [DATABASE.md](docs/DATABASE.md) | Schema, policies, SQL functions |
+| [AI.md](docs/AI.md) | What the model does, and what it is not allowed to do |
+| [SECURITY.md](docs/SECURITY.md) | Trust model, what was verified, known gaps |
+| [TESTING.md](docs/TESTING.md) | What is covered, and what a green suite has missed |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Shipping it |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Working on it |
+| [GAP-ANALYSIS.md](docs/GAP-ANALYSIS.md) | Every PRD requirement, and its status |

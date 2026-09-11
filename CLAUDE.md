@@ -85,12 +85,29 @@ post-incident review has to be able to reconstruct what was known when.
 
 ## Domain
 
-_To fill in: who the users are, which disasters and regions are in scope, what
-"impact" is measured in, which languages intake must handle, and what the
-operational escalation path looks like._
+**Impact is counted only from `verified` missions.** A mission a volunteer
+marked `delivered` but no coordinator confirmed is not evidence that anything
+reached anyone. Only a coordinator may make that transition — a courier
+confirming their own delivery would let one person manufacture the numbers the
+platform reports.
+
+Wherever a figure could plausibly be counted twice, it is counted once: people
+are deduped per incident, response time is measured to the *first* delivery per
+incident as a median, only perishable food counts as rescued, and a kind
+delivered in mixed units reports no total at all. Incidents with no headcount
+are reported as a gap, never as zero. `engine/impact.ts` carries the reasoning
+inline — read it before changing an aggregate.
+
+_Still to fill in: who the users are, which disasters and regions are in scope,
+which languages intake must handle, and what the operational escalation path
+looks like._
 
 ## Not wired up yet
 
-Geocoding, routing/distance matrix, mission creation from a match preview,
-realtime subscriptions on the frontend, and dashboard charts. The pages under
-`frontend/src/pages/` are placeholders.
+`mission_stops` and multi-stop route ordering — a mission is currently one
+pickup and one dropoff. `impact_metrics` is empty by design and must not be
+read for a dashboard (see migration 0012); live figures are derived in
+`services/impact.service.ts`.
+
+Not built, and deferred with reasons in `docs/GAP-ANALYSIS.md`: shortage
+forecasting, the what-if simulator, trust/fraud scoring, and voice intake.

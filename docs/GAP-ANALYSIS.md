@@ -13,6 +13,22 @@
 > PRD's weights and a per-term breakdown) done. Incident intake and triage
 > screens shipped. A new defect, D12, was found and fixed.
 >
+> **Phases 4–7.** #3 (response plans), #4 (matching with DB-level reservations,
+> closing D7), #5 (food rescue with expiry boost), #6 and #7 (volunteer and
+> vehicle assignment), #8 (routing adapter), #9 (live map), #10 (mission
+> lifecycle), #11 (realtime) and #12 (dynamic reallocation) done. Five faults
+> found by running the system end to end, each fixed and committed separately.
+>
+> **Phase 8 update.** #17 (impact analytics with charts) and #21 (seed / reset /
+> health-check) done; #22 (docs suite) complete with AI, SECURITY, TESTING,
+> DEPLOYMENT and DEMO. Security reviewed against the live project — no leaks
+> found across 16 tables signed out or as a citizen, and privilege escalation
+> blocked at the database. Deployment config shipped for both halves.
+>
+> **Every P0 requirement is built.** Outstanding: #13, #14, #15 and #16 — all
+> P2, all deliberately deferred. Multi-stop routing (`mission_stops`) is
+> likewise unbuilt; a mission is one pickup and one dropoff.
+>
 > The tables below are the original Phase 0 audit, annotated.
 
 
@@ -58,16 +74,16 @@ Priority: **P0** = demo fails without it · **P1** = demo is weak without it ·
 | 10 | Mission tracking | ⚠️ `missions` table + enum only | No create/list/transition routes; no state machine; no timeline UI | Phase 6 | P0 |
 | 11 | Realtime | ⚠️ publication configured in SQL | No browser subscription, no `useRealtime` | Phase 6 | P0 |
 | 12 | Dynamic reallocation | ❌ nothing | Releasable/protected partition, before-after diff, approval, audit | Phase 7 | P0 |
-| 13 | Shortage forecasting | ❌ nothing | Demand rollup + naive projection | Phase 8 | P2 |
-| 14 | What-if simulator | ❌ nothing | Scenario input → matcher on a hypothetical pool | Phase 8 | P2 |
-| 15 | Trust / fraud detection | ❌ nothing | Duplicate + implausible-quantity heuristics | Phase 8 | P2 |
-| 16 | Voice + multilingual intake | ⚠️ `source_language` extracted | Web Speech API capture; language surfaced in UI | Phase 8 | P2 |
-| 17 | Impact analytics | ❌ Recharts installed, never imported | `impact_metrics`, aggregation endpoint, dashboard charts | Phase 8 | P1 |
+| 13 | Shortage forecasting | ❌ deferred | Demand rollup + naive projection | not built | P2 |
+| 14 | What-if simulator | ❌ deferred | Scenario input → matcher on a hypothetical pool | not built | P2 |
+| 15 | Trust / fraud detection | ❌ deferred | Duplicate + implausible-quantity heuristics | not built | P2 |
+| 16 | Voice + multilingual intake | ⚠️ `source_language` extracted and surfaced | Web Speech API capture | not built | P2 |
+| 17 | Impact analytics | ✅ done — derived from verified deliveries, dedupe per incident, median response, mixed-unit honesty, lazy-loaded charts | — | Phase 8 | P1 |
 | 18 | Auth + roles | ✅ done — six roles, session, protected + role-gated routes, profile | — | Phase 1 | P0 |
 | 19 | Resource CRUD | ✅ done — routes, service, repository, table UI with create/edit/delete | — | Phase 2 | P0 |
 | 20 | Needs CRUD | ✅ done — list, create, update endpoints | Fulfilment UI lands with matching | Phase 2 | P0 |
-| 21 | Demo seed / reset | ❌ nothing | `scripts/seed-demo-data`, `reset-demo-data`, `health-check` | Phase 8 | P0 |
-| 22 | Docs suite | ⚠️ README + CLAUDE.md + this audit | API, DATABASE, AI, SECURITY, DEPLOYMENT, TESTING, DEMO | rolling | P1 |
+| 21 | Demo seed / reset | ✅ done — `npm run seed -- --reset`, `npm run health`, `npm run set-role` | — | Phase 8 | P0 |
+| 22 | Docs suite | ✅ done — API, DATABASE, ARCHITECTURE, DEVELOPMENT, SETUP, AI, SECURITY, TESTING, DEPLOYMENT, DEMO | — | rolling | P1 |
 | 23 | CI | ✅ done — `.github/workflows/ci.yml` | — | Phase 1 | P1 |
 
 ---
