@@ -1,21 +1,30 @@
 # TRIPTI — Deployment
 
-Three pieces, deployed separately.
+**One Vercel project, two services, one origin.**
 
-| Piece | Platform | Config |
+| Piece | Where | Config |
 | --- | --- | --- |
 | Database + Auth | Supabase | `supabase/migrations/` |
-| API | Vercel — **its own project**, root `backend` | `backend/vercel.json` |
-| Web app | Vercel — **its own project**, root `frontend` | `frontend/vercel.json` |
+| Web app — served at `/` | Vercel service `web` | root `vercel.json` |
+| API — served at `/api` | Vercel service `api` | root `vercel.json` |
 
-`render.yaml` is kept as an alternative host for the API and is equally valid;
-§6 covers it.
+Vercel Services build each service separately and route between them with
+top-level rewrites. The important consequence is that **the browser never makes
+a cross-origin request**, which deletes the two settings most likely to be got
+wrong:
 
-**Two Vercel projects, not one.** They are separate deployments from the same
-repository, each with its own root directory. The API holds the service role
-key, which bypasses every RLS policy in the project and must never reach a
-browser bundle — separate projects keep the two environments from ever sharing
-a variable list by accident.
+- **No `CORS_ORIGINS` to coordinate.** Same origin, so there is no preflight
+  and nothing to keep in sync with a deployment URL.
+- **No `VITE_API_BASE_URL` to set.** The client's default is `/api`, which is
+  already correct — and it mirrors local dev, where Vite proxies `/api` to
+  `:4000`. One code path, both environments.
+
+A service receives the **original** request path, so `/api/impact` arrives at
+the API as `/api/impact`. The routers mounted at `/api` in `app.ts` match
+unchanged; nothing is stripped and no compatibility shim is needed.
+
+`render.yaml` remains a working alternative for hosting the API separately;
+§6 covers it and what changes if you use it.
 
 ---
 
@@ -43,79 +52,68 @@ letting anyone silently skip it.
 
 ---
 
-## 2. API on Vercel
+## 2. Deploying
 
-New Project → same repository → **Root Directory: `backend`**. That one setting
-is what separates this project from the web app; everything else comes from
-`backend/vercel.json`.
-
-### How an Express app runs serverless
-
-`backend/api/index.js` default-exports the app that `createApp()` builds, and
-Vercel's Node runtime treats a default-exported `(req, res)` function as the
-handler. Every route, all middleware and the error handler behave exactly as
-under `npm start` — there is one definition of what `/api/impact` means, in
-`app.ts`, and both entry points use it.
-
-It imports the **compiled** `../dist/app.js` rather than the TypeScript source.
-The backend's tsconfig sets `rootDir: "src"`, so a `.ts` file in `api/` would
-sit outside the project and go untypechecked by CI. `buildCommand` runs
-`npm run build` first, so `dist` exists before the function is bundled.
-
-`public/index.html` is served at `/` and also satisfies Vercel's requirement
-that a project with a build command produce a static output directory.
+Import `adityamohan-creator/TRIPTI` at **vercel.com/new**. Vercel reads the
+root `vercel.json`, detects both services and wires the routing itself — leave
+Root Directory at `./`, and do not set a framework preset. The import screen
+should list `frontend` at `/` and `backend` at `/api`.
 
 ### Environment variables
+
+Variables are shared across services in one project, so these are set once:
 
 | Variable | Notes |
 | --- | --- |
 | `SUPABASE_URL` | |
 | `SUPABASE_ANON_KEY` | |
 | `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS. Rotate immediately if it leaks. |
+| `VITE_SUPABASE_URL` | Same value as `SUPABASE_URL` |
+| `VITE_SUPABASE_ANON_KEY` | Same value as `SUPABASE_ANON_KEY` |
 | `ANTHROPIC_API_KEY` | Optional — omit and extraction uses the fallback |
-| `CORS_ORIGINS` | **Must** list the web app's Vercel origin |
 
-`CORS_ORIGINS` is the one that will bite, and it cannot be set correctly until
-the web app exists — see §4.
+**Do not set `VITE_API_BASE_URL`.** Unset is correct here; setting it replaces
+a working same-origin path with a cross-origin one that then needs CORS.
 
-Verify with `https://<api>.vercel.app/health` → `{"status":"ok"}`.
+`CORS_ORIGINS` is not needed either. It has a safe default and nothing
+cross-origin reaches the API.
 
-### What serverless changes
+Only `VITE_`-prefixed variables are inlined into the browser bundle. The
+service role key must never carry that prefix — it would ship to every visitor
+and void every RLS policy in the project.
+
+### How each service is built
+
+**`web`** — Vite, `npm run build`, output `dist`.
+
+**`api`** — `npm run build` (tsc), then Vercel runs `dist/server.js`: the same
+entry point `npm start` uses. There is no serverless wrapper and no second
+definition of any route. `server.ts` already listens on `process.env.PORT`,
+which Vercel assigns.
+
+Verify with `https://<your-project>.vercel.app/health` → `{"status":"ok"}`.
+
+### What hosting changes
 
 Named rather than discovered later:
 
-- **Rate limits become per-instance.** `express-rate-limit` holds its buckets in
-  memory, and every warm instance has its own. The documented ceilings are no
-  longer global. A shared store is required before this matters.
+- **Rate limits become per-instance.** `express-rate-limit` holds buckets in
+  memory and service backends run as functions on Fluid compute, so the
+  documented ceilings are no longer global across instances. A shared store is
+  required before that matters.
 - **Cold starts.** The first request to an idle instance pays for importing the
-  app and validating the environment. `maxDuration` is raised to 30s so that
-  plus a Supabase round trip cannot hit the default 10s ceiling.
-- **Nothing may be written to disk.** The app does not, but anything added
-  later must not either.
-- **`config.ts` throws at cold start when the environment is incomplete**, which
-  surfaces as a 500 rather than a failed boot. Loud, but check the function log
-  rather than the deploy log.
+  app and validating the environment.
+- **Nothing may be written to disk.** The app does not; anything added later
+  must not either.
+- **`config.ts` throws at startup when the environment is incomplete**, which
+  surfaces as a 500. Loud, but read the function log, not the build log.
 
-## 3. Web app on Vercel
+---
 
-A **second** Vercel project from the same repository → **Root Directory:
-`frontend`**.
+## 3. The build guard, and why it exists
 
-| Variable | Value |
-| --- | --- |
-| `VITE_SUPABASE_URL` | same project as the API |
-| `VITE_SUPABASE_ANON_KEY` | public by design; it ships in the bundle |
-| `VITE_API_BASE_URL` | `https://<api>.vercel.app/api` — **including `/api`** |
-
-Only `VITE_`-prefixed variables reach the bundle, and everything there is public
-by design. The service role key belongs in the API project, never here — a
-`VITE_` prefix on it would inline it into JavaScript every visitor downloads and
-void every RLS policy in the project.
-
-### The build guard, and why it exists
-
-`frontend/vite.config.ts` fails the build when `VITE_SUPABASE_*` is missing **or
-still a placeholder**. Do not remove it.
+`frontend/vite.config.ts` fails the build when `VITE_SUPABASE_*` is missing
+**or still a placeholder**. Do not remove it.
 
 Vite substitutes `import.meta.env.VITE_*` with string literals at build time.
 With them unset, `isSupabaseConfigured` became a static `false`, and the
@@ -125,35 +123,9 @@ green. The real bundle is around 460 KB plus lazy chunks.
 
 That guard turns a silent, invisible failure into a loud one.
 
-A missing `VITE_API_BASE_URL` warns rather than fails, because serving behind a
-proxy that forwards `/api` is legitimate. On Vercel it is not: the SPA rewrite
-deliberately excludes `api/`, so an unset value produces a clean 404 on every
-data call instead of an HTML page arriving where JSON was expected.
-
 ---
 
-## 4. The ordering problem
-
-The two projects each need the other's URL, so one pass cannot set both.
-
-1. **Deploy the API first.** Set `CORS_ORIGINS` to anything for now — the value
-   is wrong until step 3 and nothing depends on it yet.
-2. **Deploy the web app**, with `VITE_API_BASE_URL` pointing at the API from
-   step 1. Note the URL Vercel assigns it.
-3. **Go back to the API project**, set `CORS_ORIGINS` to that URL, and
-   redeploy.
-
-Until step 3 the app loads and every request fails. The browser reports a
-network or CORS error rather than a configuration one, so this is worth doing in
-order rather than debugging afterwards.
-
-Use the project's stable production domain, not a per-deployment preview URL —
-preview URLs change on every push, and each one is a different origin that
-`CORS_ORIGINS` will not match.
-
----
-
-## 5. After deploying
+## 4. After deploying
 
 ```bash
 npm run health                    # against the deployed project
@@ -166,7 +138,7 @@ came out the other.
 
 ---
 
-## 6. Alternative: the API on Render
+## 5. Alternative: the API on Render
 
 `render.yaml` is a Render blueprint for the same API, kept because a
 long-running server is what the code actually assumes — in particular the
@@ -186,18 +158,14 @@ Nothing else changes: `VITE_API_BASE_URL` points at the Render URL instead, and
 
 ---
 
-## 7. Checklist
+## 6. Checklist
 
 - [ ] All seven migration steps applied, in order
-- [ ] **Two** Vercel projects, root directories `backend` and `frontend`
-- [ ] `VITE_API_BASE_URL` points at the API, including `/api`
-- [ ] `CORS_ORIGINS` set to the web app's production domain, and the API
-      redeployed **after** setting it
-- [ ] Frontend and backend name the **same** Supabase project — compare the
-      project refs character by character. A hand-typed ref that differed by one
-      character produced confusing failures for an afternoon; `npm run health`
-      now checks this explicitly.
-- [ ] Service role key set on the API project only, never in a `VITE_` variable
-- [ ] At least one account promoted to `coordinator`
+- [ ] Imported at repository root — Root Directory `./`, no framework preset
+- [ ] Import screen shows both services: `frontend` at `/`, `backend` at `/api`
+- [ ] Both `SUPABASE_*` and both `VITE_SUPABASE_*` variables set
+- [ ] `VITE_API_BASE_URL` **not** set
+- [ ] Service role key set without a `VITE_` prefix
 - [ ] `/health` returns `{"status":"ok"}`
+- [ ] At least one account promoted to `coordinator`
 - [ ] A real report submitted through the deployed UI reaches the board

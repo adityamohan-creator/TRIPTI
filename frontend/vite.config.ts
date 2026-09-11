@@ -44,17 +44,21 @@ export default defineConfig(({ command, mode }) => {
     }
 
     /*
-     * Not fatal, because it is legitimate to serve the app behind a proxy that
-     * forwards /api to the backend. But on a static host there is no such
-     * proxy, and the failure is quiet: the app loads and every data call fails.
-     * Worth saying out loud at the one moment someone is looking.
+     * A note, not a warning, because unset is correct in the deployment this
+     * project actually uses: root vercel.json puts the API on the same origin
+     * at /api, so the default is right and setting this would override a
+     * working same-origin path with a cross-origin one.
+     *
+     * It is only wrong when the API lives somewhere else — a separate Vercel
+     * project, or Render — and then the failure is quiet: the app loads and
+     * every data call 404s. Worth stating at the one moment someone is looking.
      */
     if (!env.VITE_API_BASE_URL) {
-      console.warn(
-        '\n  VITE_API_BASE_URL is not set. The bundle will call /api on its own\n' +
-          '  origin, which only works if something there proxies /api to the\n' +
-          '  backend. On Vercel or any static host, set it to the deployed API,\n' +
-          '  including the /api suffix.\n',
+      console.log(
+        '\n  VITE_API_BASE_URL is unset, so the bundle will call /api on its own\n' +
+          '  origin. That is correct when the API is deployed alongside the app\n' +
+          '  (see the services block in vercel.json). Set it only if the API is\n' +
+          '  hosted separately, and include the /api suffix.\n',
       )
     }
   }
