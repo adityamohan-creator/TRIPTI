@@ -37,7 +37,25 @@ const schema = z.object({
     ),
 })
 
-const parsed = schema.safeParse(process.env)
+/*
+ * A blank variable means the same as an absent one.
+ *
+ * Hosting dashboards do not distinguish the two: leaving an optional field
+ * empty in Render or Vercel submits "" rather than omitting the key. Without
+ * this, ANTHROPIC_API_KEY deliberately left blank — which the setup docs tell
+ * people to do — fails `.min(1)`, and `.optional()` does not save it because
+ * optional admits `undefined`, not the empty string.
+ *
+ * The cost of getting this wrong is out of all proportion to the mistake: the
+ * process throws here, before the server listens, so the platform reports only
+ * a failed health check and the real reason sits in a build log nobody thinks
+ * to open. It cost one failed Render deploy to find.
+ */
+const env = Object.fromEntries(
+  Object.entries(process.env).filter(([, value]) => value == null || value.trim() !== ''),
+)
+
+const parsed = schema.safeParse(env)
 
 if (!parsed.success) {
   const issues = parsed.error.issues
