@@ -81,7 +81,7 @@ export const TOUR_STEPS: TourStep[] = [
     eyebrow: 'Step 7 of 7',
     title: 'Watch it refuse',
     action:
-      'Open Reallocate. Read the moves it proposes — then read the list of commitments it declined to touch, which is shown with equal weight.',
+      'First file one more report, worse than anything on the board — a dam breach with thousands cut off — and triage it as critical. That is the real trigger: a plan is only ever wrong because something worse arrived after it. Then open Reallocate and read the moves it proposes, followed by the list of commitments it declined to touch, shown with equal weight.',
     point:
       'This is the part worth staying for. It will not take a run a volunteer has accepted, one already moving, one with a named volunteer, anything serving a life-critical need, or any donor it cannot identify. It also refuses to move for less than a 15-point priority gain, because below that it is just churn. Unknown always means protected.',
   },
