@@ -83,8 +83,27 @@ export function AppRoutes() {
           }
         />
         <Route path="missions" element={<MissionsPage />} />
-        <Route path="availability" element={<VolunteerPage />} />
-        <Route path="vehicles" element={<VehiclesPage />} />
+        {/*
+          Gated to match the nav rather than only hidden from it. Hiding a link
+          is presentation; typing the URL must land somewhere that explains
+          itself instead of on an empty screen that reads as a fault.
+        */}
+        <Route
+          path="availability"
+          element={
+            <RoleRoute allow={['volunteer', 'admin']}>
+              <VolunteerPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="vehicles"
+          element={
+            <RoleRoute allow={['volunteer', 'ngo', 'coordinator', 'admin']}>
+              <VehiclesPage />
+            </RoleRoute>
+          }
+        />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

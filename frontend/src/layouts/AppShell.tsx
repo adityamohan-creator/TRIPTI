@@ -16,16 +16,33 @@ interface NavItem {
   end?: boolean
 }
 
+/*
+ * `roles` hides an item that would open on nothing.
+ *
+ * The backend already scopes every one of these correctly — a citizen asking
+ * for vehicles gets their own, which is none. But the link was still in the
+ * nav, so the screen opened empty and read as broken rather than as
+ * not-for-you. An empty state is the right answer to "you have none"; it is
+ * the wrong answer to "this was never yours".
+ *
+ * This is presentation only. Removing a link is not access control, and the
+ * routes and services stay exactly as authoritative as before.
+ */
+const RESPONDERS = ['volunteer', 'ngo', 'coordinator', 'admin'] as const
+const STAFF = ['coordinator', 'admin'] as const
+
 const NAV: NavItem[] = [
   { to: '/app', label: 'Overview', end: true },
   { to: '/app/map', label: 'Map' },
   { to: '/app/incidents', label: 'Incidents' },
   { to: '/app/resources', label: 'Resources' },
-  { to: '/app/planning', label: 'Planning', roles: ['coordinator', 'admin'] },
-  { to: '/app/reallocation', label: 'Reallocate', roles: ['coordinator', 'admin'] },
+  { to: '/app/planning', label: 'Planning', roles: STAFF },
+  { to: '/app/reallocation', label: 'Reallocate', roles: STAFF },
   { to: '/app/missions', label: 'Missions' },
-  { to: '/app/vehicles', label: 'Vehicles' },
-  { to: '/app/availability', label: 'Availability' },
+  // The fleet is operational data; a citizen or donor owns no vehicles.
+  { to: '/app/vehicles', label: 'Vehicles', roles: RESPONDERS },
+  // Availability is a volunteer's own shift record. Nobody else has one to set.
+  { to: '/app/availability', label: 'Availability', roles: ['volunteer', 'admin'] },
 ]
 
 function initials(name: string | null, email: string | undefined): string {
