@@ -1,0 +1,23 @@
+{
+  /*
+   * Production build. Same compiler options, minus the tests.
+   *
+   * The plain tsconfig.json deliberately includes test files so `npm run
+   * typecheck` covers them — a test that no longer compiles is a broken test.
+   * But emitting them caused two problems:
+   *
+   *   1. Every *.test.js shipped to the server. With NODE_ENV=production the
+   *      host installs no devDependencies, so those files import a `vitest`
+   *      that is not there. Nothing executes them, so nothing fails — dead
+   *      weight sitting in a deployment, waiting to confuse someone.
+   *
+   *   2. Worse: vitest's default include pattern matches dist/ too, so after a
+   *      build `npm run test` ran every suite twice — once from src, once from
+   *      stale compiled output. A source test could fail while its older
+   *      compiled twin passed, and the run still looked green. This project has
+   *      already been bitten several times by a green suite hiding a real bug;
+   *      it does not need a mechanism that manufactures them.
+   */
+  "extends": "./tsconfig.json",
+  "exclude": ["src/**/*.test.ts", "src/**/__tests__/**"]
+}
