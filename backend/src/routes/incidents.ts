@@ -190,6 +190,21 @@ const Triage = z
     status: z.enum(['open', 'triaged', 'assigned', 'resolved']).optional(),
     lat: z.number().min(-90).max(90).optional(),
     lon: z.number().min(-180).max(180).optional(),
+    /*
+     * The headcount, which extraction deliberately never invents — it copies
+     * what the report states and otherwise leaves null.
+     *
+     * It was missing from this schema, which left no way at all to supply it:
+     * the model refuses to guess, and the human override had no field. So the
+     * figure the whole impact report is built on could only ever be null, and
+     * "people reached" read zero however many deliveries were verified. The
+     * one number a coordinator is most likely to know from a phone call had
+     * nowhere to go.
+     *
+     * Nullable on purpose. Clearing it back to "not known" has to stay
+     * possible, because an unverified figure is worse than an absent one.
+     */
+    people_affected: z.number().int().min(0).max(100_000_000).nullable().optional(),
     note: z.string().max(500).optional(),
   })
   .refine((v) => (v.lat === undefined) === (v.lon === undefined), {

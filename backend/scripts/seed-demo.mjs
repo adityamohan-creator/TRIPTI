@@ -63,7 +63,7 @@ const RESOURCES = [
     label: 'DEMO — Cooked meals, Sector 18 kitchen',
     description: 'Vegetarian, packed in trays of 20. Collection from the rear gate.',
     kind: 'food',
-    quantity: 400,
+    quantity: 4_000,
     unit: 'meals',
     address: 'Sector 18, Noida',
     lat: 28.5706,
@@ -74,7 +74,7 @@ const RESOURCES = [
   {
     label: 'DEMO — Drinking water, municipal depot',
     kind: 'water',
-    quantity: 12_000,
+    quantity: 60_000,
     unit: 'litres',
     address: 'Okhla Phase II',
     lat: 28.5355,
@@ -84,12 +84,45 @@ const RESOURCES = [
   {
     label: 'DEMO — Blankets, relief warehouse',
     kind: 'clothing',
-    quantity: 850,
+    quantity: 3_500,
     unit: 'units',
     address: 'Ghaziabad',
     lat: 28.6692,
     lon: 77.4538,
     perishable: false,
+  },
+  {
+    label: 'DEMO — Rescue team, district response unit',
+    description: 'Six trained responders with boats. Unmetered — a team, not a quantity.',
+    kind: 'rescue',
+    quantity: null,
+    unit: null,
+    address: 'Sector 62, Noida',
+    lat: 28.6271,
+    lon: 77.3716,
+    perishable: false,
+  },
+  {
+    label: 'DEMO — Medical supplies, partner clinic',
+    kind: 'medical',
+    quantity: 900,
+    unit: 'kits',
+    address: 'Mayur Vihar',
+    lat: 28.6094,
+    lon: 77.2952,
+    perishable: false,
+  },
+  {
+    label: 'DEMO — Surplus bread, bakery chain',
+    description: 'Close to date. The food-rescue case: it feeds people or it is thrown away.',
+    kind: 'food',
+    quantity: 620,
+    unit: 'kg',
+    address: 'Laxmi Nagar',
+    lat: 28.6304,
+    lon: 77.2777,
+    perishable: true,
+    expiry_time: new Date(Date.now() + 3 * 3600_000).toISOString(),
   },
 ]
 
@@ -130,8 +163,60 @@ const VOLUNTEER_RECORD = {
   notes: 'DEMO volunteer. Available for the demo window.',
 }
 
-const REPORT =
-  'Flooding near Sector 62 since last night. Around 300 people are stranded on upper floors, including elderly residents. Food and drinking water are urgently needed.'
+/**
+ * The scenario, as a set of reports.
+ *
+ * Written the way a person actually phones one in — no structure, uneven
+ * detail, and a headcount sometimes stated and sometimes not.
+ *
+ * `triage` is what a coordinator fills in afterwards. Extraction never invents
+ * a headcount, so without that pass every impact figure reads zero however
+ * much was delivered.
+ */
+const INCIDENTS = [
+  {
+    report_text:
+      'Flooding near Sector 62 since last night. Around 2,400 people are stranded on upper floors, including elderly residents. Food and drinking water are urgently needed.',
+    lat: 28.6271,
+    lon: 77.3716,
+    triage: { severity: 'critical', people_affected: 2400, status: 'triaged' },
+  },
+  {
+    report_text:
+      'Dam overflow upstream. Whole colony cut off, no drinking water since yesterday morning. Roughly 4,000 affected. Boats needed, some people still on rooftops.',
+    lat: 28.6692,
+    lon: 77.4538,
+    triage: { severity: 'critical', people_affected: 4000, status: 'triaged' },
+  },
+  {
+    report_text:
+      'Shelter roof collapsed overnight in freezing conditions. 1,200 people moved to the school hall. They need blankets and warm food tonight.',
+    lat: 28.6094,
+    lon: 77.2952,
+    triage: { severity: 'high', people_affected: 1200, status: 'triaged' },
+  },
+  {
+    report_text:
+      'Relief camp at the community centre has been running three days. About 800 staying. Meals holding out but water is getting low.',
+    lat: 28.5706,
+    lon: 77.3272,
+    triage: { severity: 'high', people_affected: 800, status: 'triaged' },
+  },
+  {
+    report_text:
+      'Some households on this street need warm clothes and blankets tonight. Maybe forty or fifty people, mostly families with small children.',
+    lat: 28.6304,
+    lon: 77.2777,
+    triage: { severity: 'medium', people_affected: 45, status: 'triaged' },
+  },
+  {
+    report_text:
+      'Minor waterlogging on a side street. A few households say they could use drinking water but nobody is in danger.',
+    lat: 28.5355,
+    lon: 77.391,
+    triage: { severity: 'low', people_affected: 25, status: 'triaged' },
+  },
+]
 
 const admin = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
@@ -191,10 +276,16 @@ async function reset() {
     removed.missions = missions?.length ?? 0
   }
 
+  /*
+   * Matched on who filed them, not on their text. The scenario is six separate
+   * reports now, and matching one string would have left five behind — with
+   * their needs, matches and missions still on the board after a reset that
+   * claimed to have cleared it.
+   */
   const { data: incidents } = await admin
     .from('incidents')
     .delete()
-    .like('report_text', `%${REPORT.slice(0, 40)}%`)
+    .in('reported_by', userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000'])
     .select('id')
   removed.incidents = incidents?.length ?? 0
 
@@ -216,6 +307,14 @@ async function reset() {
     // The audit trail is append-only during operations; a wholesale demo reset
     // is the one time its rows go with the data they describe, rather than
     // being left pointing at incidents that no longer exist.
+    /*
+     * Reallocations reference profiles with no cascade rule, so a single
+     * proposal left behind makes deleting the coordinator fail with nothing
+     * more specific than "Database error deleting user" — a reset that reports
+     * success while leaving the account in place.
+     */
+    await admin.from('reallocations').delete().in('created_by', userIds)
+
     await admin.from('status_history').delete().in('changed_by', userIds)
     await admin.from('volunteers').delete().in('user_id', userIds)
   }
@@ -268,6 +367,40 @@ async function call(path, accessToken, body) {
   const parsed = text ? JSON.parse(text) : null
   if (!res.ok) throw new Error(`${path} → ${res.status}: ${parsed?.error ?? res.statusText}`)
   return parsed
+}
+
+/**
+ * Waits out a rate limit rather than failing the seed.
+ *
+ * Seeding is a legitimate bulk operation against limits written for a single
+ * person clicking — six reports in as many seconds is exactly the shape the
+ * intake limiter exists to refuse. Backing off and retrying respects the limit
+ * instead of weakening it, and a seed that dies half-finished leaves the
+ * database in a state nobody asked for.
+ */
+async function withRetry(fn, label) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fn()
+    } catch (err) {
+      const limited = String(err.message).includes('429')
+      if (!limited || attempt >= 2) throw err
+      const wait = 20_000
+      console.log(`  ${DIM}rate limited on ${label}; waiting ${wait / 1000}s${RESET}`)
+      await new Promise((r) => setTimeout(r, wait))
+    }
+  }
+}
+
+async function callPatch(path, accessToken, body) {
+  const res = await fetch(`${API}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`PATCH ${path} -> ${res.status} ${text.slice(0, 200)}`)
+  return text ? JSON.parse(text) : null
 }
 
 async function callPut(path, accessToken, body) {
@@ -344,18 +477,49 @@ async function seed() {
     `  ${GREEN}✔${RESET} volunteer availability ${DIM}${volunteer.availability}, ${volunteer.skills.length} skills${RESET}`,
   )
 
-  // An incident, filed by the citizen through the real API — this runs
-  // extraction, writes the needs, and appends to the audit trail.
+  /*
+   * Incidents, filed by the citizen through the real API so extraction runs,
+   * needs are written and the audit trail is appended — then triaged by the
+   * coordinator, exactly as a person would.
+   */
   const citizenToken = await token(`citizen@${DEMO_DOMAIN}`)
-  const result = await call('/incidents', citizenToken, {
-    report_text: REPORT,
-    lat: 28.6271,
-    lon: 77.3716,
-  })
+  const coordinatorToken = await token(`coordinator@${DEMO_DOMAIN}`)
+  let modelRead = 0
+
+  for (const incident of INCIDENTS) {
+    const result = await withRetry(
+      () =>
+        call('/incidents', citizenToken, {
+          report_text: incident.report_text,
+          lat: incident.lat,
+          lon: incident.lon,
+        }),
+      'incident intake',
+    )
+    if (result.source === 'model') modelRead += 1
+
+    /*
+     * The triage pass. `people_affected` is the important one: extraction
+     * refuses to guess a headcount, so until a coordinator supplies it every
+     * impact figure reads zero no matter how much was delivered.
+     */
+    await withRetry(
+      () => callPatch(`/incidents/${result.incident.id}`, coordinatorToken, incident.triage),
+      'triage',
+    )
+
+    console.log(
+      `  ${GREEN}✔${RESET} ${incident.report_text.slice(0, 44)}… ${DIM}${incident.triage.severity}, ${incident.triage.people_affected.toLocaleString()} affected${RESET}`,
+    )
+  }
 
   console.log(
-    `  ${GREEN}✔${RESET} incident filed ${DIM}${result.source === 'model' ? `AI, confidence ${result.extraction.confidence}` : 'keyword fallback'}, ${result.extraction.needs.length} needs${RESET}`,
+    `
+  ${DIM}${modelRead} of ${INCIDENTS.length} read by the model; ${INCIDENTS.length - modelRead} by the keyword fallback.${RESET}`,
   )
+  if (modelRead === 0) {
+    console.log(`  ${DIM}Set ANTHROPIC_API_KEY to have the model read them instead.${RESET}`)
+  }
 
   console.log(`\nDone. Sign in with any of these:\n`)
   for (const account of ACCOUNTS) {
