@@ -54,12 +54,24 @@ build settings are already correct:
 | Setting | Value |
 | --- | --- |
 | Root directory | `backend` |
-| Build command | `npm ci && npm run build` |
+| Build command | `npm ci --include=dev && npm run build` |
 | Start command | `npm start` (→ `node dist/server.js`) |
 | Health check | `/health` |
 
 `npm ci` rather than `npm install`: a deploy must build the lockfile's tree, not
 whatever resolves that morning.
+
+`--include=dev` is not optional. `NODE_ENV=production` is set on the service,
+npm reads it at install time and omits devDependencies — and that is where
+`typescript`, `@types/express` and `@types/node` live. Without them the build
+either cannot find `tsc`, or runs it with no Express type definitions and
+reports every `req`, `res` and `next` in every router as an implicit `any`
+(TS7006). The errors name the route files, so they read like a code problem.
+They are an install problem, and no amount of annotating handler parameters
+fixes them — those annotations are imported from the very package that is
+missing.
+
+The runtime needs none of it: `npm start` runs compiled JavaScript.
 
 Every secret is marked `sync: false`, so Render prompts for the value and stores
 it encrypted rather than reading it from the file:

@@ -15,7 +15,18 @@ services:
 
     # `npm ci` rather than `install`: a deploy must build the lockfile's tree,
     # not whatever resolves that morning.
-    buildCommand: npm ci && npm run build
+    #
+    # `--include=dev` is load-bearing. NODE_ENV is set to production below, and
+    # npm reads that at install time and omits devDependencies — which is where
+    # typescript, @types/express and @types/node live. Without them tsc either
+    # is not installed at all, or runs with no type definitions for Express and
+    # reports every `req`, `res` and `next` in every router as an implicit any
+    # (TS7006). The error points at the route files, so it reads like a code
+    # problem; it is an install problem.
+    #
+    # The runtime still needs none of them: `npm start` runs compiled JS, and
+    # the production dependency tree is unchanged by this flag.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
 
     healthCheckPath: /health
