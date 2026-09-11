@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import { config } from './config.js'
 import { AppError } from './lib/errors.js'
 import { generalLimiter } from './middleware/rateLimit.js'
+import { feedRouter } from './routes/feed.js'
 import { fleetRouter } from './routes/fleet.js'
 import { geoRouter } from './routes/geo.js'
 import { impactRouter } from './routes/impact.js'
@@ -55,6 +56,7 @@ export function createApp() {
   app.use('/api/reallocation', reallocationRouter)
   app.use('/api/missions', missionsRouter)
   app.use('/api/impact', impactRouter)
+  app.use('/api/feed', feedRouter)
   app.use('/api/geocode', geoRouter)
   app.use('/api', fleetRouter)
   app.use('/api/match', matchRouter)

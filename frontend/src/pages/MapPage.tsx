@@ -2,19 +2,22 @@ import { Alert } from '../components/ui/Alert'
 import { LiveIndicator } from '../components/ui/LiveIndicator'
 import { Skeleton } from '../components/ui/Skeleton'
 import { ErrorState } from '../components/ui/States'
+import { AlertFeed } from '../features/map/AlertFeed'
 import {
   CrisisMap,
   MapLegend,
   type MapIncident,
   type MapResource,
+  type MapAlert,
   type MapRoute,
   type MapVehicle,
 } from '../features/map/CrisisMap'
+import { useEffect, useRef } from 'react'
 import { useAsync } from '../hooks/useAsync'
 import { useRealtime } from '../hooks/useRealtime'
 import { get } from '../lib/api'
 import { minutesUntil } from '../lib/format'
-import type { Incident, Mission, Resource, Vehicle } from '../types/api'
+import type { FeedResponse, Incident, Mission, Resource, Vehicle } from '../types/api'
 
 /** Anything due within this window is worth flagging on the map. */
 const EXPIRING_SOON_MINUTES = 12 * 60
@@ -24,6 +27,13 @@ export function MapPage() {
   const resources = useAsync(() => get<{ resources: Resource[] }>('/resources?usable=true'), [])
   const missions = useAsync(() => get<{ missions: Mission[] }>('/missions'), [])
   const vehicles = useAsync(() => get<{ vehicles: Vehicle[] }>('/vehicles'), [])
+
+  /*
+   * The external feed is loaded separately and never gates the map. It is
+   * context from outside the operation — if GDACS is slow or down, the incident
+   * picture must still draw.
+   */
+  const feed = useAsync(() => get<FeedResponse>('/feed'), [])
 
   const loading =
     incidents.loading || resources.loading || missions.loading || vehicles.loading
@@ -54,6 +64,25 @@ export function MapPage() {
     ['incidents', 'needs', 'resources', 'missions', 'vehicles'],
     reloadAll,
   )
+
+  /*
+   * Polled, not subscribed. The alert feed lives outside this database, so no
+   * postgres change will ever announce it. Six minutes sits just past the
+   * server's five-minute cache, so a refresh here usually costs nothing
+   * upstream.
+   */
+  const reloadFeed = useRef(feed.reload)
+
+  // Written in an effect, not during render: React reserves the right to run a
+  // render twice or abandon it, and the interval only reads this much later.
+  useEffect(() => {
+    reloadFeed.current = feed.reload
+  }, [feed.reload])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => reloadFeed.current(), 6 * 60 * 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const located: MapIncident[] = (incidents.data?.incidents ?? [])
     .filter((i) => i.lat != null && i.lon != null && i.status !== 'resolved')
@@ -116,6 +145,20 @@ export function MapPage() {
     })
     .filter((r) => r.points.length >= 2)
 
+  // Only located alerts can be drawn; the panel lists all of them regardless.
+  const alertMarkers: MapAlert[] = (feed.data?.alerts ?? [])
+    .filter((a) => a.lat != null && a.lon != null)
+    .map((a) => ({
+      id: a.id,
+      lat: a.lat!,
+      lon: a.lon!,
+      kind: a.kind,
+      title: a.title,
+      level: a.level,
+      impactLabel: a.impactLabel,
+      url: a.url,
+    }))
+
   const unlocatedIncidents = (incidents.data?.incidents ?? []).filter(
     (i) => i.lat == null && i.status !== 'resolved',
   ).length
@@ -144,7 +187,13 @@ export function MapPage() {
 
       {!loading && !error && (
         <>
-          <CrisisMap incidents={located} resources={supply} vehicles={fleet} routes={routes} />
+          <CrisisMap
+            incidents={located}
+            resources={supply}
+            vehicles={fleet}
+            routes={routes}
+            alerts={alertMarkers}
+          />
           <MapLegend />
 
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-2">
@@ -152,7 +201,10 @@ export function MapPage() {
             <span>{supply.length} resource(s) plotted</span>
             <span>{fleet.length} vehicle(s) plotted</span>
             <span>{routes.length} route(s) drawn</span>
+            <span>{alertMarkers.length} external alert(s)</span>
           </div>
+
+          <AlertFeed data={feed.data} loading={feed.loading} error={feed.error} />
 
           {(unlocatedIncidents > 0 || unlocatedResources > 0) && (
             <Alert tone="warning" title="Not on the map">

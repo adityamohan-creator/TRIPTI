@@ -489,3 +489,39 @@ export interface ImpactReport {
   /** Operational posture. Null for roles that may not see it. */
   utilisation: Utilisation | null
 }
+
+// -------------------------------------------------------- alert feed
+
+export type AlertLevel = 'green' | 'orange' | 'red'
+
+export interface DisasterAlert {
+  id: string
+  kind: string
+  title: string
+  summary: string
+  level: AlertLevel
+  country: string | null
+  lat: number | null
+  lon: number | null
+  /**
+   * The feed's own wording about human impact. Shown verbatim and never
+   * reformatted — the underlying number means a different thing per event type,
+   * including a death count on floods.
+   */
+  impactLabel: string | null
+  severity: string | null
+  publishedAt: string
+  url: string
+  source: string
+}
+
+export interface FeedResponse {
+  alerts: DisasterAlert[]
+  source: string
+  fetchedAt: string
+  /** True when the upstream feed failed and this is the last good copy. */
+  stale: boolean
+  error?: string
+  /** Alert ids sitting near an incident already on our board. */
+  nearActive: string[]
+}

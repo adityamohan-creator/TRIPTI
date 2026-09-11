@@ -42,12 +42,38 @@ export interface MapVehicle {
   available: boolean
 }
 
+/**
+ * An alert from the external feed.
+ *
+ * Drawn differently from an incident on purpose — dashed, hollow, no fill. A
+ * coordinator must never confuse "the world is reporting this" with "we have
+ * taken this on". One is context; the other is a commitment with people
+ * attached.
+ */
+export interface MapAlert {
+  id: string
+  lat: number
+  lon: number
+  kind: string
+  title: string
+  level: 'green' | 'orange' | 'red'
+  impactLabel: string | null
+  url: string
+}
+
 export interface MapRoute {
   id: string
   /** [lat, lon] pairs. */
   points: [number, number][]
   /** True when this is a straight line, not a real road route. */
   estimated: boolean
+}
+
+/** The feed's own three-step scale, not ours. */
+const ALERT_COLOR: Record<'green' | 'orange' | 'red', string> = {
+  red: 'var(--color-sev-critical)',
+  orange: 'var(--color-sev-high)',
+  green: 'var(--color-sev-low)',
 }
 
 const SEVERITY_COLOR: Record<Severity, string> = {
@@ -81,10 +107,13 @@ export function CrisisMap({
   resources,
   vehicles = [],
   routes = [],
+  alerts = [],
   height = '28rem',
 }: {
   incidents: MapIncident[]
   resources: MapResource[]
+  /** External feed alerts. Context only — never treated as our work. */
+  alerts?: MapAlert[]
   /**
    * Vehicles, not volunteers. A vehicle's position is operational; a
    * volunteer's is where a person is standing, and plotting that for every
@@ -95,6 +124,15 @@ export function CrisisMap({
   routes?: MapRoute[]
   height?: string
 }) {
+  /*
+   * Alerts are deliberately excluded from the fit.
+   *
+   * The external feed is global — a few hundred markers spread across every
+   * continent. Including them would zoom the map out to the whole world on
+   * every load, and the incidents this team is actually working would shrink to
+   * a cluster of pixels. The view frames our own operation; alerts appear
+   * within it where they happen to fall, and the panel lists the rest.
+   */
   const points: [number, number][] = [
     ...incidents.map((i) => [i.lat, i.lon] as [number, number]),
     ...resources.map((r) => [r.lat, r.lon] as [number, number]),
@@ -184,6 +222,47 @@ export function CrisisMap({
           </CircleMarker>
         ))}
 
+        {/*
+          Alerts render beneath everything else: they are background, and a
+          marker for work we have actually taken on must never be hidden by one
+          for something we have only been told about.
+        */}
+        {alerts.map((alert) => (
+          <CircleMarker
+            key={alert.id}
+            center={[alert.lat, alert.lon]}
+            radius={13}
+            pathOptions={{
+              color: ALERT_COLOR[alert.level],
+              fillOpacity: 0,
+              weight: 2,
+              // Dashed and hollow, so it reads as "reported elsewhere" at a
+              // glance rather than as another incident on the board.
+              dashArray: '4 4',
+            }}
+          >
+            <Popup>
+              <strong>{alert.title}</strong>
+              <br />
+              <span style={{ textTransform: 'capitalize' }}>
+                {alert.kind} · {alert.level} alert
+              </span>
+              {alert.impactLabel && (
+                <>
+                  <br />
+                  {alert.impactLabel}
+                </>
+              )}
+              <br />
+              <em>Reported by GDACS. Not an incident on this board.</em>
+              <br />
+              <a href={alert.url} target="_blank" rel="noreferrer noopener">
+                Open the report
+              </a>
+            </Popup>
+          </CircleMarker>
+        ))}
+
         {incidents.map((incident) => (
           <CircleMarker
             key={incident.id}
@@ -230,6 +309,13 @@ export function MapLegend() {
           }}
         />
         Incident, by severity
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="size-3 rounded-full border-2 border-dashed"
+          style={{ borderColor: 'var(--color-sev-high)' }}
+        />
+        External alert, not ours
       </span>
       <span className="flex items-center gap-1.5">
         <span

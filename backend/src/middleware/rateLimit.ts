@@ -36,3 +36,16 @@ export const geoLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many place lookups. Wait a moment and try again.' },
 })
+
+/**
+ * The external alert feed is cached for five minutes server-side, so this is
+ * not about protecting GDACS — the cache does that. It is about one client
+ * being unable to spin the endpoint and the incident query behind it.
+ */
+export const feedLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many feed requests. Wait a moment and try again.' },
+})
