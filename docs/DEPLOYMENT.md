@@ -48,8 +48,10 @@ letting anyone silently skip it.
 
 **Deploy this first.** Vercel needs the API's URL.
 
-New → Blueprint → select the repository. Render reads `render.yaml`, so the
-build settings are already correct:
+There is nothing to upload. A Render blueprint is read from the repository, so
+either use the **Deploy to Render** button in the README, or go to
+**New → Blueprint** and select the repo. Both read `render.yaml`, so the build
+settings are already correct:
 
 | Setting | Value |
 | --- | --- |
@@ -57,6 +59,7 @@ build settings are already correct:
 | Build command | `npm ci --include=dev && npm run build` |
 | Start command | `npm start` (→ `node dist/server.js`) |
 | Health check | `/health` |
+| Auto deploy | on every commit to `main` (`autoDeployTrigger: commit`) |
 
 `npm ci` rather than `npm install`: a deploy must build the lockfile's tree, not
 whatever resolves that morning.
@@ -81,8 +84,15 @@ it encrypted rather than reading it from the file:
 | `SUPABASE_URL` | |
 | `SUPABASE_ANON_KEY` | |
 | `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS. Rotate immediately if it leaks. |
-| `ANTHROPIC_API_KEY` | Optional — omit and extraction uses the fallback |
-| `CORS_ORIGINS` | **Must** list the deployed Vercel origin — see §4 |
+| `ANTHROPIC_API_KEY` | **Leave blank.** Extraction falls back to the keyword scan |
+| `CORS_ORIGINS` | **Leave blank for now** — it is the Vercel URL, which does not exist yet. Set it in §4 |
+
+Blank is safe for the last two. Render submits an untouched field as an empty
+string rather than omitting it, and `config.ts` treats blank and absent
+identically, so a blank falls through to the documented default. It did not
+always: an empty `ANTHROPIC_API_KEY` once failed validation and killed the
+process before it listened, and Render reported nothing more specific than a
+failed health check.
 
 Verify with `https://<your-app>.onrender.com/health` → `{"status":"ok"}`.
 

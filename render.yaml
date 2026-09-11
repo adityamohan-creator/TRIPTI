@@ -29,6 +29,13 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
 
+    # Every push to the tracked branch rebuilds and redeploys. `autoDeploy: true`
+    # is the deprecated spelling of this.
+    autoDeployTrigger: commit
+
+    # Render holds traffic until this returns 2xx, and rolls back rather than
+    # replacing a working instance with a broken one. /health is unauthenticated
+    # and says nothing about the deployment — it is reachable from anywhere.
     healthCheckPath: /health
 
     envVars:
@@ -52,12 +59,22 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
 
-      # Optional. Without it extraction falls back to the deterministic keyword
-      # scan and the app keeps working, with reports marked unread by the model.
+      # Both of the following are safe to leave BLANK at blueprint time.
+      #
+      # Render submits an untouched field as an empty string rather than
+      # omitting it, and config.ts now treats blank and absent as the same
+      # thing — so a blank here falls through to the documented default instead
+      # of failing validation and killing the process before it listens. That
+      # cost one failed deploy to learn.
+
+      # Optional for good. Without it extraction falls back to the deterministic
+      # keyword scan: reports are still accepted and every screen still works,
+      # they are just flagged for manual triage because no model has read them.
       - key: ANTHROPIC_API_KEY
         sync: false
 
-      # Must list the deployed frontend origin, comma separated. Left at the
-      # dev default, the browser app cannot call this API at all.
+      # Not knowable yet — it is the Vercel URL, which does not exist until the
+      # frontend is deployed. Leave blank now and set it afterwards, otherwise
+      # the browser app cannot call this API at all.
       - key: CORS_ORIGINS
         sync: false

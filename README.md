@@ -95,6 +95,13 @@ explainable. See [CLAUDE.md](CLAUDE.md) for the full set of constraints.
 Frontend to Vercel with **root directory `frontend`**, backend to Render
 (`render.yaml`), database on Supabase.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/adityamohan-creator/TRIPTI)
+
+That button reads `render.yaml` from this repository and creates the API
+service from it — build and start commands, health check and Node version are
+all in the file, so the only thing to supply is the three Supabase values.
+`ANTHROPIC_API_KEY` and `CORS_ORIGINS` can be left blank and filled in later.
+
 The split is deliberate: the API holds the service role key, which bypasses
 every RLS policy and must never be built into anything a browser downloads. The
 backend also stays a long-running Express server rather than serverless, because
