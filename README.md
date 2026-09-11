@@ -92,16 +92,13 @@ explainable. See [CLAUDE.md](CLAUDE.md) for the full set of constraints.
 
 ## Deployment
 
-One Vercel project with two services — the web app at `/` and the API at
-`/api` — plus the database on Supabase. The API service runs `dist/server.js`,
-the same entry point `npm start` uses, so there is one definition of every
-route.
+Frontend to Vercel with **root directory `frontend`**, backend to Render
+(`render.yaml`), database on Supabase.
 
-Because both share an origin, the browser never makes a cross-origin request:
-no CORS to configure, and no API base URL to set. That mirrors local dev, where
-Vite proxies `/api` to `:4000`.
-
-`render.yaml` is kept as an alternative host for the API.
+The split is deliberate: the API holds the service role key, which bypasses
+every RLS policy and must never be built into anything a browser downloads. The
+backend also stays a long-running Express server rather than serverless, because
+the in-process rate limiter's ceilings are only global on one live instance.
 
 Full steps, including the two settings that will otherwise bite you, are in
 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
