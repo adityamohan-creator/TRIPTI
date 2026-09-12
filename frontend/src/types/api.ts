@@ -525,3 +525,58 @@ export interface FeedResponse {
   /** Alert ids sitting near an incident already on our board. */
   nearActive: string[]
 }
+
+// ------------------------------------------------- crisis report fusion
+
+export type InformationCategory =
+  | 'infrastructure_damage'
+  | 'casualty_or_injury'
+  | 'flooding'
+  | 'fire'
+  | 'shelter_need'
+  | 'food_need'
+  | 'water_need'
+  | 'medical_need'
+  | 'evacuation'
+  | 'rescue_request'
+  | 'resource_availability'
+  | 'other'
+
+export type CriticalityLevel = 'critical' | 'high' | 'medium' | 'low'
+
+export interface CriticalityFactor {
+  key: string
+  label: string
+  points: number
+  detail: string
+}
+
+export interface FusedCluster {
+  clusterId: string
+  informationCategory: InformationCategory
+  informationCategoryLabel: string
+  categoryConfidence: number
+  categoryTerms: string[]
+  /** AI-03 operational criticality, 0-100. Not TRIPTI's resource priority. */
+  priorityScore: number
+  priorityLevel: CriticalityLevel
+  priorityReason: string
+  priorityFactors: CriticalityFactor[]
+  /** Source identifiers, carried from the reports. Never generated. */
+  evidenceIds: string[]
+  reportIds: string[]
+  reportCount: number
+  cohesion: number | null
+  reports: { id: string; sourceId: string | null; text: string; postedAt: string | null }[]
+}
+
+export interface FusionRun {
+  source: 'incidents' | 'demo'
+  /** Non-null whenever synthetic data was used. Shown, never suppressed. */
+  disclaimer: string | null
+  reportsAnalysed: number
+  clusters: FusedCluster[]
+  totals: { clusters: number; critical: number; high: number; medium: number; low: number }
+  evidenceAudit: { ok: boolean; fabricated: string[]; empty: string[] }
+  provider: string
+}

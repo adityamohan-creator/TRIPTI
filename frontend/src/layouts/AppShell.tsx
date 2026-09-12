@@ -29,6 +29,7 @@ interface NavItem {
  * routes and services stay exactly as authoritative as before.
  */
 const RESPONDERS = ['volunteer', 'ngo', 'coordinator', 'admin'] as const
+const RESPONDERS_STAFF = ['ngo', 'coordinator', 'admin'] as const
 const STAFF = ['coordinator', 'admin'] as const
 
 const NAV: NavItem[] = [
@@ -36,6 +37,8 @@ const NAV: NavItem[] = [
   { to: '/app/map', label: 'Map' },
   { to: '/app/incidents', label: 'Incidents' },
   { to: '/app/resources', label: 'Resources' },
+  // Reads the whole board to make sense of, so gated like Planning.
+  { to: '/app/intelligence', label: 'Intelligence', roles: RESPONDERS_STAFF },
   { to: '/app/planning', label: 'Planning', roles: STAFF },
   { to: '/app/reallocation', label: 'Reallocate', roles: STAFF },
   { to: '/app/missions', label: 'Missions' },

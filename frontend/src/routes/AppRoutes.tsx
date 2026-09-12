@@ -10,6 +10,7 @@ import { VehiclesPage } from '../features/fleet/VehiclesPage'
 import { VolunteerPage } from '../features/fleet/VolunteerPage'
 import { MissionsPage } from '../features/missions/MissionsPage'
 import { PlanningPage } from '../features/plans/PlanningPage'
+import { CrisisIntelligencePage } from '../features/fusion/CrisisIntelligencePage'
 import { ReallocationPage } from '../features/reallocation/ReallocationPage'
 import { ResourcesPage } from '../features/resources/ResourcesPage'
 import { AppShell } from '../layouts/AppShell'
@@ -79,6 +80,14 @@ export function AppRoutes() {
           element={
             <RoleRoute allow={['coordinator', 'admin']}>
               <PlanningPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="intelligence"
+          element={
+            <RoleRoute allow={['ngo', 'coordinator', 'admin']}>
+              <CrisisIntelligencePage />
             </RoleRoute>
           }
         />

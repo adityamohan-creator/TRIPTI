@@ -6,6 +6,7 @@ import { AppError } from './lib/errors.js'
 import { generalLimiter } from './middleware/rateLimit.js'
 import { feedRouter } from './routes/feed.js'
 import { fleetRouter } from './routes/fleet.js'
+import { fusionRouter } from './routes/fusion.js'
 import { geoRouter } from './routes/geo.js'
 import { impactRouter } from './routes/impact.js'
 import { incidentsRouter } from './routes/incidents.js'
@@ -57,6 +58,7 @@ export function createApp() {
   app.use('/api/missions', missionsRouter)
   app.use('/api/impact', impactRouter)
   app.use('/api/feed', feedRouter)
+  app.use('/api/fusion', fusionRouter)
   app.use('/api/geocode', geoRouter)
   app.use('/api', fleetRouter)
   app.use('/api/match', matchRouter)
